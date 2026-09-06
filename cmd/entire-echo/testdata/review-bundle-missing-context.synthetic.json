@@ -1,0 +1,19 @@
+{
+  "schema_version": "entire-echo.review-bundle/v1",
+  "target": {"checkpoint_id": "synthetic-missing", "session_id": "session-missing"},
+  "context": {
+    "status": "unavailable",
+    "reasons": ["Stored checkpoint transcript was unavailable."]
+  },
+  "overview": {"text": "Review of checkpoint synthetic-missing, session session-missing.", "evidence_ids": ["E001"], "confidence": "confirmed"},
+  "requested": [],
+  "implemented": [],
+  "missing_or_uncertain": [{"text": "Requested and implemented details may be incomplete because the stored transcript was unavailable.", "evidence_ids": ["E002"], "confidence": "question"}],
+  "potentially_affected": [],
+  "continuation": [{"text": "Continue only after recovering or replacing the missing context.", "evidence_ids": ["E001"], "confidence": "question"}],
+  "evidence": [
+    {"id": "E001", "kind": "checkpoint_metadata", "locator": "checkpoint:synthetic-missing", "command": ["entire", "checkpoint", "explain", "synthetic-missing", "--json"], "excerpt": "synthetic metadata", "confidence": "confirmed"},
+    {"id": "E002", "kind": "warning", "locator": "checkpoint:synthetic-missing/transcript", "command": ["entire", "checkpoint", "explain", "synthetic-missing", "--transcript"], "excerpt": "stored transcript was unavailable", "confidence": "question"}
+  ],
+  "warnings": [{"text": "Synthetic missing-context fixture: not organizer-provided evidence.", "evidence_ids": ["E002"]}]
+}

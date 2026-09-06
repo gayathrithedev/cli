@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"strings"
@@ -112,5 +113,61 @@ func TestValidateBundleRejectsUnlinkedClaim(t *testing.T) {
 	err := validateBundle(ReviewBundle{Overview: Claim{Text: "fact"}, Evidence: []Evidence{{ID: "E001"}}})
 	if err == nil {
 		t.Fatal("expected unlinked claim error")
+	}
+}
+
+func TestSyntheticMissingContextFixture(t *testing.T) {
+	t.Parallel()
+	var bundle ReviewBundle
+	if err := json.Unmarshal([]byte(fixture(t, "review-bundle-missing-context.synthetic.json")), &bundle); err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Context.Status != contextUnavailable || len(bundle.Context.Reasons) == 0 {
+		t.Fatalf("synthetic fixture context = %#v", bundle.Context)
+	}
+	if err := validateBundle(bundle); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildRedactedContext(t *testing.T) {
+	t.Parallel()
+	f := &fakeRunner{results: map[string]fakeResult{
+		"entire checkpoint explain target --json":                                    {out: fixture(t, "checkpoint.json")},
+		"git rev-parse --show-toplevel":                                              {out: "/repo\n"},
+		"entire checkpoint explain target --transcript --session-index 1":            {out: `{"type":"user","text":"[REDACTED]"}`},
+		"git log --all --format=%H --fixed-strings --grep=Entire-Checkpoint: 01TEST": {out: "abc\n"},
+		"git diff --find-renames abc^ abc --":                                        {out: ""},
+	}}
+	bundle, err := build(context.Background(), f, "/repo", "target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Context.Status != contextRedacted || len(bundle.Context.Reasons) == 0 {
+		t.Fatalf("context = %#v", bundle.Context)
+	}
+}
+
+func TestSensitiveCommandErrorsDoNotReachBundleOrTerminal(t *testing.T) {
+	t.Parallel()
+	const sentinel = "NOON-CURVEBALL-SENTINEL-SECRET"
+	f := &fakeRunner{results: map[string]fakeResult{
+		"entire checkpoint explain target --json":                                                          {out: fixture(t, "checkpoint.json")},
+		"git rev-parse --show-toplevel":                                                                    {out: "/repo\n"},
+		"entire checkpoint explain target --transcript --session-index 1":                                  {err: errors.New("failure " + sentinel), errOut: sentinel},
+		"git log --all --format=%H --fixed-strings --grep=Entire-Checkpoint: 01TEST":                       {out: "abc\n"},
+		"git diff --find-renames abc^ abc --":                                                              {out: fixture(t, "change.diff")},
+		"entire graph impact --repo /repo --symbol Added --file new.go --depth 1 --limit 10 --format json": {err: errors.New("failure " + sentinel), errOut: sentinel},
+	}}
+	bundle, err := build(context.Background(), f, "/repo", "target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(bundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), sentinel) || strings.Contains(renderText(bundle), sentinel) {
+		t.Fatal("sensitive command error reached local review output")
 	}
 }

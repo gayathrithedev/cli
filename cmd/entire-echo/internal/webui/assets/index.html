@@ -20,7 +20,7 @@
             <label><input type="radio" name="density" value="focused" checked> Focused</label>
             <label><input type="radio" name="density" value="detailed"> Detailed</label>
           </fieldset>
-          <button id="fixture-mode" type="button">Use included fixture</button>
+          <button id="fixture-mode" type="button">Use included fixture (development only)</button>
         </nav>
       </div>
     </header>
@@ -30,6 +30,7 @@
       <section aria-labelledby="review-heading" class="overview-panel">
         <h2 id="review-heading">Review</h2>
         <p id="load-state">Loading review data…</p>
+        <p id="context-state" class="context-state" aria-live="polite"></p>
         <dl id="target" class="target" aria-label="Review target"></dl>
         <div id="overview"></div>
       </section>

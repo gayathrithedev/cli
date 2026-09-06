@@ -59,6 +59,8 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f0f3ef; paddi
 .warning { padding: .9rem; margin-block: .75rem; border-left: .35rem solid var(--warning); background: var(--warning-bg); }
 .warning p { margin: 0; }
 .sr-status { min-height: 1.5rem; margin: 1rem 0 0; color: var(--muted); }
+.context-state { padding: .75rem; border-left: .35rem solid var(--accent); background: #eff3ef; font-weight: 700; }
+.context-state[data-status="partial"], .context-state[data-status="redacted"], .context-state[data-status="unavailable"] { border-left-color: var(--warning); background: var(--warning-bg); }
 .detailed-only { display: none; }
 body[data-density="detailed"] .detailed-only { display: block; }
 body[data-density="detailed"] .review-card { padding: 1.35rem; }
