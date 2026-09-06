@@ -1,0 +1,242 @@
+The Noon Curveball is now active for Track E1.
+
+Work on branch feature/echo-privacy-integration.
+
+Do not edit code until reconstruction, privacy-boundary analysis, Entire Graph
+impact analysis, and source verification are complete.
+
+PRE-CURVEBALL CHECKPOINT
+
+Checkpoint ID: 01M1TNMR0MTEV9MY2HXBT7K54B
+Checkpoint commit: 86ae83643364024c64147176cda3478047d8b46a
+
+Earlier core checkpoint:
+01M1TMPET59F0TG8TCYSPWYTJF
+Commit: 931b5c5
+
+REDACTED FIXTURE
+
+PATH_TO_REDACTED_FIXTURE
+
+EXACT CURVEBALL REQUIREMENT
+
+Our checkpoint-native experience must now work with sensitive repositories.
+
+- Raw prompts and transcripts must not be sent to a new external service.
+- The product must continue to provide useful output when sensitive fields are
+  redacted or unavailable.
+- Existing local functionality must continue to work.
+- The interface must clearly distinguish complete and incomplete context.
+- Include at least one test using redacted or missing Checkpoint data.
+- Use Entire Graph to identify every code path affected by this privacy boundary.
+- Never present incomplete context as a complete or authoritative result.
+- Preserve existing working behavior.
+
+PHASE 1 — RECONSTRUCT BEFORE EDITING
+
+1. Check the installed checkpoint explain help before assuming its flags.
+2. Use the pre-Curveball checkpoint to reconstruct:
+   - original user problem,
+   - intended architecture,
+   - completed core behavior,
+   - completed accessible web behavior,
+   - known limitations,
+   - unfinished integration,
+   - and open privacy risks.
+3. Read docs/buildathon/initial-architecture.md and BUILDATHON.md.
+4. Read the source and tests linked to both pre-Curveball checkpoints.
+5. Clearly document what was confirmed from checkpoint evidence versus inferred.
+6. Do not modify files during this phase.
+
+PHASE 2 — GRAPH IMPACT BEFORE EDITING
+
+Use Entire Graph to identify every path affected by the privacy boundary.
+
+First locate the exact symbols for:
+
+- checkpoint metadata and transcript acquisition,
+- transcript parsing,
+- diff acquisition,
+- Graph query construction,
+- deterministic synthesis,
+- ReviewBundle,
+- Claim and Evidence,
+- terminal rendering,
+- JSON rendering,
+- HTTP API rendering,
+- browser review rendering,
+- speech synthesis,
+- and warnings/context completeness.
+
+Run Graph relationship or impact analysis on each relevant exact symbol before
+editing. At minimum, analyze the main acquisition/orchestration symbol,
+ReviewBundle, and the rendering/API path.
+
+Graph queries must contain only code symbols and file paths. Never put raw prompt
+or transcript content into a Graph query.
+
+If Graph returns empty, partial, timed-out, or uncertain results:
+
+- preserve the actual result,
+- do not claim there is no impact,
+- use rg/source reading/tests to complete the investigation,
+- label the Graph output incomplete,
+- and list the source files used for verification.
+
+Do not edit until this phase is complete.
+
+PHASE 3 — INSPECT PREVIOUS WIP
+
+A stash named “WIP integration stopped for Noon Curveball” exists.
+
+After privacy analysis, inspect it read-only:
+
+git stash show --stat stash@{0}
+git stash show --include-untracked --patch stash@{0}
+
+Do not blindly apply the stash.
+Do not restore the generated entire-echo binary.
+Reuse only source changes that satisfy the revised privacy design.
+
+CHANGED ASSUMPTION
+
+The previous design assumed locally acquired checkpoint context could be rendered
+and spoken once retrieved.
+
+That assumption is no longer sufficient:
+
+- prompts/transcripts may be redacted or unavailable,
+- raw content must not cross a new external-service boundary,
+- incomplete context must be visible in every renderer,
+- and browser speech implementations may use non-local voice services.
+
+REVISED PRIVACY DESIGN
+
+Implement the integration and privacy boundary together.
+
+1. Keep all checkpoint reconstruction and deterministic synthesis local.
+2. Add no external summarizer, analytics, telemetry, CDN, remote font, external
+   API, or third-party browser request.
+3. Do not send raw prompts or transcripts to Graph.
+4. Graph runtime questions may contain only code symbols, relations, and file
+   locations.
+5. Introduce an explicit context-completeness state, using source-grounded names
+   equivalent to:
+   - complete
+   - partial
+   - redacted
+   - unavailable
+6. Include machine-readable reasons for partial/redacted/unavailable context.
+7. Propagate completeness consistently through ReviewBundle, terminal output,
+   JSON, GET /api/review, browser cards, evidence and continuation output.
+8. When required evidence is redacted or unavailable:
+   - retain safe checkpoint/session/commit identifiers,
+   - retain safe changed-file and diff information,
+   - produce useful continuation guidance,
+   - downgrade affected claims to inference/question/uncertain,
+   - never label the overall review complete or authoritative.
+9. Do not expose redacted values in error messages, logs, evidence excerpts,
+   terminal output, JSON, API responses, HTML, speech text or test snapshots.
+10. Preserve existing terminal and --json behavior for complete checkpoints.
+11. Bind the local web server only to 127.0.0.1.
+12. Serve only embedded assets and the read-only review endpoint.
+13. Add a restrictive same-origin Content Security Policy.
+14. Ensure browser JavaScript makes no cross-origin requests.
+15. Use only local browser speech voices where:
+    voice.localService === true
+16. If no confirmed local voice is available:
+    - disable speech,
+    - show a clear privacy explanation,
+    - preserve complete keyboard/text functionality.
+17. Do not silently fall back to a remote voice.
+18. Never place raw transcript or prompt text into HTML using innerHTML.
+19. Do not serve arbitrary repository files or raw checkpoint files.
+20. Keep fixture mode explicit and visibly marked as fixture data.
+
+REDACTED FIXTURE
+
+Add the organizer-provided redacted fixture to the repository’s appropriate
+testdata location.
+
+Do not replace it with an invented fixture.
+
+Tests must prove:
+
+1. A complete checkpoint still produces the existing useful output.
+2. The provided redacted fixture produces useful but visibly incomplete output.
+3. Missing prompt data is labelled partial or unavailable.
+4. Missing transcript data is labelled partial or unavailable.
+5. Redacted fields never appear in terminal, JSON, API, HTML or speech text.
+6. Claims without sufficient evidence are not labelled authoritative.
+7. Safe identifiers, changed files and continuation information remain available.
+8. Graph unavailability remains distinct from “no impact.”
+9. Browser context status is visible without relying only on color.
+10. Only confirmed local speech voices can be selected.
+11. No local voice produces a safe text-only fallback.
+12. CSP and HTTP handlers prevent external-resource use.
+13. Existing core, terminal, JSON and web tests continue to pass.
+
+INTEGRATION
+
+Complete the previously planned core-to-web integration only after applying the
+privacy boundary:
+
+- embed approved assets,
+- add explicit --web mode,
+- serve the real ReviewBundle from GET /api/review,
+- preserve terminal and --json modes,
+- print the loopback URL,
+- keep browser opening optional,
+- use read-only endpoints,
+- shut down cleanly.
+
+VERIFICATION
+
+Run:
+
+- focused Entire Echo tests,
+- redacted/missing-data tests,
+- gofmt,
+- go vet,
+- Go build,
+- node --check,
+- fixture JSON validation,
+- git diff --check,
+- terminal smoke test,
+- --json smoke test,
+- --web real-checkpoint test,
+- browser keyboard/accessibility test,
+- local-voice-only test,
+- speech-unavailable fallback test,
+- and browser console inspection.
+
+Update BUILDATHON.md with:
+
+- exact Curveball wording,
+- pre-Curveball checkpoint and commit,
+- assumption that changed,
+- affected paths found by Graph,
+- incomplete Graph results,
+- revised privacy design,
+- rejected options,
+- tests and runtime evidence,
+- known limitations,
+- and why the result is safe.
+
+Do not invent final commit SHA or final checkpoint URL.
+Do not commit changes.
+
+At completion report:
+
+- checkpoint reconstruction,
+- Graph commands and outputs,
+- source verification,
+- every affected path,
+- privacy decisions,
+- reused/rejected WIP,
+- files changed,
+- tests and results,
+- runtime evidence,
+- failures,
+- residual risks,
+- and exact demo commands.
