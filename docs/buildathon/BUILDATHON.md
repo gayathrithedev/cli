@@ -20,6 +20,15 @@ Entire is essential because Echo consumes the parent CLI’s public checkpoint o
 
 Echo is a small external plugin named `entire-echo`; it does not modify the built-in command tree.
 
+### Original architecture, dependencies, and prior components
+
+The original design is an external command discovered as `entire-echo` on
+`PATH`, using the installed parent `entire` CLI for public checkpoint output,
+local Git for commit linkage/diffs, and the local `entire graph` CLI for
+bounded impact evidence. The pre-Curveball components were the deterministic
+ReviewBundle/terminal renderer and accessible static HTML/CSS/JavaScript
+review interface. There is no cloud processing dependency.
+
 The initial workflow is:
 
 1. Run `entire checkpoint explain <checkpoint-id-or-commit> --json` for machine-readable metadata.
@@ -91,7 +100,16 @@ safe generic descriptions and is not sent to or reported through a new service.
 
 ## Checkpoint links and what each checkpoint proves
 
-No concrete checkpoint IDs or links are specified in the initial architecture document.
+Pre-Noon stable state: checkpoint `01M1TNMR0MTEV9MY2HXBT7K54B` on commit
+`86ae83643364024c64147176cda3478047d8b46a` provided the accessible
+checkpoint-review and voice UI baseline. The assigned Noon Curveball required
+an explicit local-only privacy boundary and honest incomplete-context handling.
+
+The Curveball implementation is checkpoint
+`01M1TRSZQWG883KZG05QH9VX7N` on commit
+`872795db99e075f7de06314cdd82191cf604f48f`. Its metadata identifies the
+privacy implementation files, including the ReviewBundle contract, loopback
+server, local assets, synthetic fixture, tests, and this document.
 
 For a future demo, each checkpoint entry should identify the exact checkpoint, session, and commit and state what its evidence proves. The evidence model requires:
 
@@ -130,6 +148,31 @@ with a real locally available checkpoint and open only the printed
 `http://127.0.0.1:<port>/` URL. The local API is `GET /api/review`; a failed
 load is rendered as unavailable and the fixture button is explicitly
 development-only.
+
+### Final verification, 2026-09-06
+
+This session verified the exact semantic diff command reported by the installed
+Graph CLI:
+
+```text
+entire graph diff --base 86ae83643364024c64147176cda3478047d8b46a --head 872795db99e075f7de06314cdd82191cf604f48f --json --max-seconds 120 --repo /Users/gayathriperumal/buildathon/cli
+```
+
+It completed without a partial-result warning and reported the expected
+ReviewBundle contract, local web server, browser context/speech controls,
+fixture, tests, and documentation changes. The focused runtime `graph impact`
+queries for the changed symbols did not produce a result before interruption;
+Echo records that condition as question-confidence Graph warnings, not no-impact
+findings.
+
+The real checkpoint terminal, JSON, and loopback API review all returned
+`context.status: "redacted"` with reasons for redacted transcript content,
+unextractable request text, and unavailable Graph evidence. The API ran only on
+`127.0.0.1`, accepted `GET /api/review`, rejected POST with `405 Allow: GET`,
+and returned the restrictive CSP. Browser verification confirmed the visible
+incomplete label, keyboard-operable source disclosure, local-voice-only speech
+selection, text fallback, local assets, and no console errors. The bundled
+development fixture was corrected and tested as a valid `partial` bundle.
 
 ## Databricks use, data sources and limitations (if applicable)
 

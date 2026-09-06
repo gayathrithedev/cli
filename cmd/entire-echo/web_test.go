@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -85,5 +86,23 @@ func TestBrowserAssetsUseOnlyLocalVoicesAndDependencies(t *testing.T) {
 		if strings.Contains(source, forbidden) {
 			t.Fatalf("external or cloud dependency found: %s", forbidden)
 		}
+	}
+}
+
+func TestIncludedBrowserFixtureIsAValidIncompleteBundle(t *testing.T) {
+	t.Parallel()
+	raw, err := webAssets.ReadFile("internal/webui/assets/review.fixture.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bundle ReviewBundle
+	if err := json.Unmarshal(raw, &bundle); err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Context.Status != contextPartial || len(bundle.Context.Reasons) == 0 {
+		t.Fatalf("fixture context = %#v", bundle.Context)
+	}
+	if err := validateBundle(bundle); err != nil {
+		t.Fatal(err)
 	}
 }

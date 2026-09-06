@@ -1,6 +1,13 @@
 {
   "schema_version": "entire-echo.review-bundle/v1",
   "target": { "checkpoint_id": "01TEST", "session_id": "session-2", "commit": "abc" },
+  "context": {
+    "status": "partial",
+    "reasons": [
+      "Stored checkpoint transcript was unavailable in a later attempt.",
+      "Entire Graph impact evidence was partial."
+    ]
+  },
   "overview": { "text": "Review of checkpoint 01TEST, session session-2.", "evidence_ids": ["E001"], "confidence": "confirmed" },
   "requested": [{ "text": "Stored transcript text: Add deterministic checkpoint review output.", "evidence_ids": ["E002"], "confidence": "confirmed" }],
   "implemented": [{ "text": "Stored transcript text: Implemented the review renderer.", "evidence_ids": ["E002"], "confidence": "confirmed" }, { "text": "Associated commit changes: new.go, old.go.", "evidence_ids": ["E003", "E001"], "confidence": "confirmed" }],
