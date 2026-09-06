@@ -1,0 +1,127 @@
+Perform the final verification of Entire Echo on branch
+feature/echo-privacy-integration.
+
+The Noon Curveball implementation is captured in:
+
+Checkpoint: 01M1TRSZQWG883KZG05QH9VX7N
+Commit: 872795db99e075f7de06314cdd82191cf604f48f
+
+The latest stable pre-Curveball checkpoint was:
+
+Checkpoint: 01M1TNMR0MTEV9MY2HXBT7K54B
+Commit: 86ae83643364024c64147176cda3478047d8b46a
+
+First reconstruct the revised intent, architecture, privacy boundary and open
+risks from the new checkpoint and source. Do not edit files until that
+reconstruction is complete.
+
+Then complete the required final verification:
+
+1. Entire Graph semantic diff
+
+   Inspect `entire graph --help` and its subcommand help to discover the
+   supported semantic-diff command and exact arguments. Do not invent syntax.
+
+   Run the semantic diff between the pre-Curveball implementation and the
+   current privacy implementation.
+
+   Verify Graph findings against the actual Git diff and relevant source.
+   If Graph output is missing, partial or times out, report that limitation and
+   do not treat it as proof of no impact.
+
+2. Source review
+
+   Verify:
+   - checkpoint acquisition
+   - context completeness propagation
+   - redacted/missing handling
+   - evidence confidence downgrading
+   - terminal renderer
+   - JSON renderer
+   - localhost API
+   - browser UI
+   - local-only speech
+   - CSP and external-network restrictions
+
+3. Automated verification
+
+   Run:
+   - mise exec go@1.26 -- go test ./cmd/entire-echo/...
+   - mise exec go@1.26 -- go vet ./cmd/entire-echo/...
+   - mise exec go@1.26 -- go build -o /tmp/entire-echo ./cmd/entire-echo
+   - node --check cmd/entire-echo/internal/webui/assets/app.js
+   - git diff --check
+
+4. Real checkpoint end-to-end verification
+
+   Use `/tmp/entire-echo --help` to determine the exact supported syntax.
+
+   Run Entire Echo against:
+   01M1TRSZQWG883KZG05QH9VX7N
+
+   Verify:
+   - terminal review
+   - JSON ReviewBundle
+   - context status and reasons
+   - evidence locators
+   - continuation information
+   - warnings
+   - no authoritative claim when evidence is incomplete
+
+5. Local web verification
+
+   Start the supported local web mode against the real checkpoint.
+
+   Confirm:
+   - it binds only to 127.0.0.1
+   - GET /api/review works
+   - non-GET requests are rejected
+   - CSP is present
+   - all assets are local
+   - keyboard navigation works
+   - incomplete context is visibly labelled with text
+   - evidence disclosure works
+   - speech selects only localService === true voices
+   - text remains usable when speech is unavailable
+   - no browser console errors
+
+   Stop the server after testing.
+
+6. Missing-context verification
+
+   Exercise the clearly labelled synthetic missing-context fixture and confirm
+   it remains useful while never claiming complete or authoritative context.
+
+7. Documentation audit
+
+   Verify that docs/buildathon/BUILDATHON.md contains:
+   - project name and summary
+   - user/problem
+   - selected Entire track
+   - original architecture
+   - dependencies and prior components
+   - pre-Noon stable state
+   - assigned Curveball
+   - changed assumption and revised design
+   - Checkpoint evidence
+   - Graph investigation, impact and semantic-diff evidence
+   - setup/run/test instructions
+   - privacy and fixture provenance
+   - Databricks applicability or explicit not-applicable decision
+   - known limitations and next steps
+
+Update BUILDATHON.md only with factual verification results produced during
+this session. If an actual implementation defect is discovered, fix it
+minimally and add a regression test. Do not perform unrelated refactoring.
+
+Do not commit.
+
+Report:
+- reconstruction result
+- semantic-diff result and its completeness
+- source verification
+- automated test results
+- terminal/JSON/web demo results
+- changed files, if any
+- remaining risks
+- git status
