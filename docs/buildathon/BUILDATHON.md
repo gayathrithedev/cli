@@ -151,19 +151,15 @@ development-only.
 
 ### Final verification, 2026-09-06
 
-This session verified the exact semantic diff command reported by the installed
-Graph CLI:
+An earlier Graph review used this command:
 
 ```text
 entire graph diff --base 86ae83643364024c64147176cda3478047d8b46a --head 872795db99e075f7de06314cdd82191cf604f48f --json --max-seconds 120 --repo /Users/gayathriperumal/buildathon/cli
 ```
 
-It completed without a partial-result warning and reported the expected
-ReviewBundle contract, local web server, browser context/speech controls,
-fixture, tests, and documentation changes. The focused runtime `graph impact`
-queries for the changed symbols did not produce a result before interruption;
-Echo records that condition as question-confidence Graph warnings, not no-impact
-findings.
+The focused runtime `graph impact` queries for the changed symbols did not
+produce a result before interruption; Echo records that condition as
+question-confidence Graph warnings, not no-impact findings.
 
 The real checkpoint terminal, JSON, and loopback API review all returned
 `context.status: "redacted"` with reasons for redacted transcript content,
@@ -198,15 +194,59 @@ Known limitations and unresolved decisions include:
 
 Next steps are to refresh the missing organizer fixture, investigate the non-responsive runtime Graph impact queries, and conduct broader assistive-technology testing before future delivery.
 
-## Final UI polish evidence
+## Final UI polish verification
 
-Final checkpoint: `01M1TT0JM52PSW57NAWDF968CZ`. The final pre-polish merge is
-`79518ac9349b6cf1e104b1a9c534c2d07a69f6fe`; the repository is
-[`gayathrithedev/cli`](https://github.com/gayathrithedev/cli) and the privacy
-integration was reviewed in [PR #5](https://github.com/gayathrithedev/cli/pull/5).
+UI checkpoint: `01M1TWEGCRSVJ9HZCD7RH7CD84`. The semantic-diff comparison is
+exactly base `79518ac9349b6cf1e104b1a9c534c2d07a69f6fe` to head
+`d29575706a75e0cfff984f01ec55843043386ba1`.
 
-The UI polish keeps the evidence model intact while presenting a guided
-four-step review, compact context limitation disclosure, evidence rail, and
-sticky local-voice dock. Verification covers keyboard navigation, responsive
-layout, local-only assets, CSP, and no automatic speech. Databricks remains
-explicitly not used and this project does not opt in to it.
+The completed Graph semantic diff covered five files: the browser JavaScript,
+HTML, and CSS; `cmd/entire-echo/main.go`; and this document. It reported the
+guided-review UI helpers (`el`, `contextLabel`, `findingState`, `renderActive`,
+`readEvidence`, and `bind`) as additions; several former card and voice helpers
+as removals or renames; and body changes to loading, rendering, context, and
+voice controls. The Graph dependent counts are static reference estimates, not
+runtime fan-out. Its HTML/CSS reconciliation was especially noisy because the
+polished assets were compressed: unrelated elements and selectors were paired
+as renames, and dense line layout made line-level findings unreliable.
+
+The final source review verified the material JavaScript findings. `element`
+was intentionally replaced by `el`, and every internal caller uses `el`; no
+stale `element(` call remains. `activeCard`, `updateActiveCard`, and
+`renderCards` were intentionally folded into `renderNav`, `renderActive`, and
+`setActive`; card buttons and previous/next controls call `setActive`, which
+updates only the visible card, navigation state, technical evidence, and speech
+preview. They never call `speak`. `updateSpeechControls`, `speak`, and
+`localVoices` retain the local-only boundary: voices are filtered with
+`voice.localService === true`, and speech begins only through an explicit
+reading control. `window.EchoUI` still exports the test-facing `load`,
+`renderBundle`, `showUnavailable`, `state`, and `localVoices` functions.
+
+Browser `validateBundle` was restored to the same material validation behavior
+as the pre-polish UI: schema, target, context, incomplete-context reasons,
+evidence IDs, every claim, and every warning must be valid and evidence-linked.
+The guided UI keeps source disclosure exact by opening only `evidence-<id>`
+entries named by the claim; its incomplete-context banner explicitly says that
+findings are limited to verifiable evidence. `renderBundle`, evidence rendering,
+and the no-external-request scan confirm that the presentation work is UI-only:
+the only fetches remain the local `review.fixture.json` and `/api/review`, and
+the asset bundle contains no external URL, WebSocket, or cloud voice endpoint.
+
+The real checkpoint terminal and JSON check succeeded for
+`01M1TWEGCRSVJ9HZCD7RH7CD84`: it returned `context.status: "redacted"`, the two
+stored redaction reasons, and three linked evidence records. The Go web-server
+test confirms the same ReviewBundle serves only on `127.0.0.1`, with the
+restrictive CSP and `GET /api/review` behavior. Source-level interaction review
+confirms the final Entire-style guided UI logic: four focused review steps,
+compact non-authoritative context disclosure, exact evidence rail,
+keyboard-operable controls, and an explicit local-voice dock. In the
+managed verification sandbox, a live loopback listener cannot be retained for
+a full interactive browser run; this is an environment limitation, not a claim
+of successful browser-device audio output.
+
+The JavaScript had been unnecessarily minified for a source repository. It was
+reformatted and its shortened internal parameter names restored without a UI
+redesign; the only behavioral correction was restoring the pre-polish browser
+validation contract described above. Remaining honest limitations are the
+missing organizer-provided fixture, device-dependent local speech availability,
+and the unresponsive runtime Graph-impact queries.
