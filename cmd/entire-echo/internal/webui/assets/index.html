@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Entire Echo review</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#review">Skip to review</a>
+    <header class="site-header">
+      <div class="page-width">
+        <p class="eyebrow">Checkpoint review</p>
+        <h1>Entire Echo</h1>
+        <p class="lede">A calm, evidence-linked review of one checkpoint, designed to be read at your pace.</p>
+        <nav aria-label="Review settings" class="settings">
+          <fieldset>
+            <legend>Reading density</legend>
+            <label><input type="radio" name="density" value="focused" checked> Focused</label>
+            <label><input type="radio" name="density" value="detailed"> Detailed</label>
+          </fieldset>
+          <button id="fixture-mode" type="button">Use included fixture</button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="review" class="page-width" tabindex="-1">
+      <p id="short-status" class="sr-status" aria-live="polite"></p>
+      <section aria-labelledby="review-heading" class="overview-panel">
+        <h2 id="review-heading">Review</h2>
+        <p id="load-state">Loading review data…</p>
+        <dl id="target" class="target" aria-label="Review target"></dl>
+        <div id="overview"></div>
+      </section>
+
+      <section aria-labelledby="cards-heading">
+        <div class="section-heading">
+          <h2 id="cards-heading">Linear review</h2>
+          <p id="active-card">No card is active.</p>
+        </div>
+        <ol id="cards" class="review-cards"></ol>
+      </section>
+
+      <section aria-labelledby="continue-heading" class="continuation-panel">
+        <h2 id="continue-heading">Continue safely</h2>
+        <div id="continuation"></div>
+      </section>
+
+      <section aria-labelledby="evidence-heading">
+        <h2 id="evidence-heading">Evidence details</h2>
+        <p>Open only the source you need. Excerpts are shown as stored and are not interpreted as new claims.</p>
+        <div id="evidence"></div>
+      </section>
+
+      <section aria-labelledby="warnings-heading" class="warnings-panel">
+        <h2 id="warnings-heading">Warnings and availability</h2>
+        <div id="warnings"></div>
+      </section>
+
+      <section aria-labelledby="voice-heading" class="voice-panel">
+        <h2 id="voice-heading">Voice playback</h2>
+        <p id="speech-state">Speech is checking availability.</p>
+        <p id="speech-preview">Choose a review card to see what will be spoken.</p>
+        <div class="voice-controls" aria-label="Voice playback controls">
+          <button id="read-card" type="button">Read current card</button>
+          <button id="pause-resume" type="button" disabled>Pause</button>
+          <button id="stop" type="button" disabled>Stop</button>
+          <button id="repeat" type="button">Repeat</button>
+          <button id="previous-card" type="button">Previous card</button>
+          <button id="next-card" type="button">Next card</button>
+          <button id="slower" type="button">Slower</button>
+          <button id="faster" type="button">Faster</button>
+          <button id="read-evidence" type="button">Read evidence</button>
+        </div>
+        <p id="speech-rate">Rate: 1.0×</p>
+      </section>
+    </main>
+    <script src="app.js" defer></script>
+  </body>
+</html>

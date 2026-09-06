@@ -1,0 +1,21 @@
+{
+  "schema_version": "entire-echo.review-bundle/v1",
+  "target": { "checkpoint_id": "01TEST", "session_id": "session-2", "commit": "abc" },
+  "overview": { "text": "Review of checkpoint 01TEST, session session-2.", "evidence_ids": ["E001"], "confidence": "confirmed" },
+  "requested": [{ "text": "Stored transcript text: Add deterministic checkpoint review output.", "evidence_ids": ["E002"], "confidence": "confirmed" }],
+  "implemented": [{ "text": "Stored transcript text: Implemented the review renderer.", "evidence_ids": ["E002"], "confidence": "confirmed" }, { "text": "Associated commit changes: new.go, old.go.", "evidence_ids": ["E003", "E001"], "confidence": "confirmed" }],
+  "missing_or_uncertain": [{ "text": "Requested and implemented details may be incomplete because the stored transcript was unavailable in a later attempt.", "evidence_ids": ["E004"], "confidence": "question" }],
+  "potentially_affected": [{ "text": "Potential static impact for Added in new.go.", "evidence_ids": ["E003", "E005"], "confidence": "question" }],
+  "continuation": [{ "text": "Continue from the identified checkpoint and session; rerun the evidence commands recorded below before changing code.", "evidence_ids": ["E001"], "confidence": "confirmed" }],
+  "evidence": [
+    { "id": "E001", "kind": "checkpoint_metadata", "locator": "checkpoint:01TEST", "command": ["entire", "checkpoint", "explain", "target", "--json"], "excerpt": "{\"checkpoint_id\":\"01TEST\",\"sessions\":[{\"index\":1,\"session_id\":\"session-2\"}]}", "confidence": "confirmed" },
+    { "id": "E002", "kind": "checkpoint_transcript", "locator": "checkpoint:01TEST/session:session-2", "command": ["entire", "checkpoint", "explain", "target", "--transcript", "--session-index", "1"], "excerpt": "Add deterministic checkpoint review output.\nImplemented the review renderer.", "confidence": "confirmed" },
+    { "id": "E003", "kind": "git_diff", "locator": "commit:abc", "command": ["git", "diff", "--find-renames", "abc^", "abc", "--"], "excerpt": "diff --git a/new.go b/new.go\n+func Added() {}", "confidence": "confirmed" },
+    { "id": "E004", "kind": "warning", "locator": "checkpoint:01TEST/transcript", "command": ["entire", "checkpoint", "explain", "target", "--transcript", "--session-index", "1"], "excerpt": "no transcript", "confidence": "question" },
+    { "id": "E005", "kind": "graph_impact", "locator": "symbol:new.go:Added", "command": ["entire", "graph", "impact", "--repo", "/repo", "--symbol", "Added", "--file", "new.go", "--depth", "1", "--limit", "10", "--format", "json"], "excerpt": "{\"warning\":\"partial result\",\"callers\":[]}", "confidence": "question" }
+  ],
+  "warnings": [
+    { "text": "Transcript evidence is stored-session output; its checkpoint scope is not exposed by the public export contract.", "evidence_ids": ["E002"] },
+    { "text": "Graph evidence unavailable or partial for Added; this does not mean there is no impact.", "evidence_ids": ["E005"] }
+  ]
+}
