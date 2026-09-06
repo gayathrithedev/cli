@@ -1,0 +1,147 @@
+Implement the P0 accessible browser and voice-guided interface for Entire Echo
+on branch feature/echo-web.
+
+First read:
+
+- docs/buildathon/initial-architecture.md
+- the merged cmd/entire-echo implementation
+- its ReviewBundle model and tests
+
+Before editing:
+
+1. Use Entire Graph search or definition lookup to locate the real ReviewBundle
+   type, JSON field names, evidence type, card/finding type, terminal renderer,
+   and current CLI entry point.
+2. Verify every Graph finding by reading the corresponding source and tests.
+3. Treat the merged Go model as the source of truth. Do not invent a parallel
+   schema based only on the architecture document.
+4. Report incomplete Graph output honestly.
+
+Ownership:
+
+Create only the static accessible interface and fixture under:
+
+cmd/entire-echo/internal/webui/assets/
+
+Prefer these files:
+
+- index.html
+- styles.css
+- app.js
+- review.fixture.json
+
+Do not:
+
+- modify checkpoint acquisition,
+- modify Graph execution,
+- change deterministic review synthesis,
+- change terminal or JSON rendering,
+- add the HTTP server or --web CLI flag,
+- commit changes.
+
+The integration owner will connect these assets later.
+
+Data behavior:
+
+1. In production mode, fetch GET /api/review.
+2. Provide an explicit fixture/development mode using review.fixture.json.
+3. Match the real merged ReviewBundle JSON shape.
+4. Render warnings and unavailable evidence without hiding them.
+5. Never turn missing Graph evidence into “no impact.”
+6. Every factual claim must provide a “Show source” control using its evidence IDs.
+7. Escape or use textContent for all checkpoint/transcript content; do not inject
+   untrusted text using innerHTML.
+
+Page structure:
+
+1. Skip-to-content link.
+2. Product title and one-sentence overview.
+3. Target checkpoint/session/commit identifiers.
+4. Linear numbered review cards:
+   - Requested
+   - Implemented
+   - Missing or uncertain
+   - Potentially affected
+5. Continue safely section.
+6. Evidence details.
+7. Warnings/status region.
+8. Voice playback controls.
+
+Accessibility requirements:
+
+- Semantic header, main, nav, section and heading structure.
+- Full keyboard operation.
+- Strong visible focus.
+- No color-only meaning.
+- Plain language and manageable line length.
+- Comfortable default spacing.
+- Reading-density selector: focused and detailed.
+- Respect prefers-reduced-motion.
+- Use an aria-live polite region only for short status updates.
+- Do not auto-focus unexpectedly.
+- Do not auto-advance cards.
+- All voice behavior must have an equivalent visible keyboard control.
+
+Voice-guided review:
+
+Use the browser SpeechSynthesis API.
+
+Speech must start only after explicit user action.
+
+Support:
+
+- Read current card
+- Pause/resume
+- Stop
+- Repeat
+- Previous card
+- Next card
+- Slower/faster rate
+- Read evidence
+
+Display which card is active and what will be spoken.
+
+Do not add microphone recognition in P0.
+
+If speech synthesis is unavailable, keep the complete review usable as text and
+show a non-blocking message.
+
+Visual direction:
+
+Create a calm, clean, high-contrast developer interface designed for developers
+with ADHD, dyslexia, or reading overload.
+
+Avoid:
+
+- dense side-by-side diffs,
+- animated backgrounds,
+- auto-scrolling,
+- excessive gradients,
+- tiny text,
+- icon-only controls,
+- long transcript dumps.
+
+Testing and verification:
+
+1. Verify fixture mode renders without the Go server.
+2. Test loading, successful, empty, malformed and unavailable-data states.
+3. Test keyboard navigation through every control.
+4. Test focused and detailed density modes.
+5. Test speech start, pause, resume, repeat, next, previous, rate and stop.
+6. Test the speech-unavailable fallback.
+7. Check the browser console for errors.
+8. Test desktop and narrow/mobile widths.
+9. Run git diff --check.
+10. Do not modify unrelated files.
+
+At completion report:
+
+- Graph commands and results,
+- source files used to verify the real schema,
+- files changed,
+- browser checks performed,
+- accessibility decisions,
+- known limitations,
+- and integration requirements.
+
+Do not commit.
