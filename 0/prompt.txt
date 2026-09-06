@@ -1,0 +1,501 @@
+Polish the Entire Echo interface into a clean, understandable, Entire-style
+checkpoint-review experience.
+
+Branch: feature/echo-final-ui-polish
+Base commit: 79518ac9349b6cf1e104b1a9c534c2d07a69f6fe
+
+The current implementation is functionally verified. Preserve all existing
+behavior, privacy guarantees, evidence grounding, accessibility semantics,
+terminal output and ReviewBundle schema.
+
+Do not commit.
+
+PRODUCT GOAL
+
+Entire Echo is for developers with dyslexia, ADHD, reading fatigue, or anyone
+taking over AI-assisted work who needs to understand:
+
+1. What was requested?
+2. What was implemented?
+3. What is missing or uncertain?
+4. What could be affected?
+5. How can the work be continued safely?
+
+The current UI exposes these as one long technical document. Redesign it into a
+guided review where the user always knows:
+
+- where they are;
+- what the current information means;
+- how reliable the context is;
+- what can be heard;
+- where the supporting evidence lives;
+- what to do next.
+
+MANDATORY PRE-EDIT GRAPH WORK
+
+Before editing any file:
+
+1. Inspect:
+   - entire graph capabilities --json
+   - entire graph search --help
+   - entire graph def --help
+   - entire graph impact --help
+
+2. Run focused Graph searches/definitions/impact analysis for:
+   - renderBundle
+   - renderCards
+   - renderContext
+   - updateActiveCard
+   - updateSpeechControls
+   - speak
+   - localVoices
+   - startWebServer
+   - reviewHandler
+
+3. Identify relationships between:
+   - ReviewBundle fields
+   - generated review cards
+   - active-card navigation
+   - evidence disclosure
+   - context completeness
+   - speech text
+   - localhost API
+
+4. Verify every Graph result against app.js, index.html, styles.css, web.go and
+   tests. If Graph returns nothing, times out or is partial, document that and
+   continue using source/tests as evidence. Never report incomplete Graph output
+   as proof of no impact.
+
+Do not edit until this analysis is completed.
+
+REFERENCE DESIGN DIRECTION
+
+Use the approved design direction:
+
+- Compact top product header
+- Left four-step review navigation
+- One dominant active review panel
+- Collapsed evidence rail/drawer
+- Compact Continue safely panel
+- Sticky bottom voice dock
+- Focused/Detailed reading mode
+- Local-only and context-completeness indicators
+- Progressive disclosure for technical content
+
+Do not create a marketing page, hero section, dashboard metrics, bento grid,
+illustrations, gradients or decorative widgets.
+
+ENTIRE VISUAL TOKENS
+
+Use locally defined CSS custom properties approximating the inspected official
+Entire UI:
+
+:root {
+  --entire-page: #f6f6f6;
+  --entire-surface: #ffffff;
+  --entire-surface-subtle: #fcfcfc;
+  --entire-surface-muted: #f2f2f2;
+  --entire-text: #0f0f0f;
+  --entire-text-secondary: #707070;
+  --entire-border: #e8e8e8;
+  --entire-border-strong: rgba(0, 0, 0, 0.10);
+  --entire-accent: #372aac;
+  --entire-accent-soft: #eae9f5;
+  --entire-danger: #c10007;
+  --entire-warning-background: #fff7e6;
+  --entire-warning-border: #a35b00;
+  --entire-radius-sm: 6px;
+  --entire-radius: 8px;
+  --entire-radius-lg: 10px;
+}
+
+Typography:
+
+- Font stack:
+  ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+  sans-serif
+- Monospace:
+  ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace
+- Body: 16px / 24px / weight 400
+- Secondary/meta: 14px / 20px
+- Caption: 12px / 16px
+- Main screen heading: 30px / 36px / weight 500
+- Section heading: 24px / 28px / weight 500
+- Card/control heading: 16px / 20px / weight 600
+- Avoid excessive bold text. Entire commonly uses weights 400, 500 and 600.
+
+Use no external font, CDN, image, icon library, analytics, API, stylesheet or
+script. If no licensed Entire font already exists locally in the repository,
+do not download or copy it.
+
+Use inline, accessible SVG only for small interface icons. Do not imitate or
+alter the official Entire logo. A text heading saying “Entire Echo” is enough.
+
+DESKTOP INFORMATION ARCHITECTURE
+
+Build an app shell that works within a 13–14 inch laptop viewport:
+
+1. TOP HEADER
+
+   Approximately 64px tall.
+
+   Left:
+   - Entire Echo
+   - concise text describing it as a checkpoint review
+
+   Middle/right:
+   - “Local-only”
+   - context state: Complete, Partial, Redacted or Unavailable
+   - Focused/Detailed control
+
+   Context state must include visible text and must not rely only on color.
+
+2. LEFT REVIEW NAVIGATION
+
+   Four numbered interactive steps:
+
+   1. Requested
+   2. Implemented
+   3. Missing or uncertain
+   4. Potentially affected
+
+   Each step shows a concise count or state:
+   - “Unavailable”
+   - “1 finding”
+   - “4 potential impacts”
+
+   Replace every “Make current card” button with understandable navigation.
+   The navigation item itself selects the corresponding review section.
+
+   Use buttons or correct tab semantics with:
+   - aria-selected or aria-current
+   - visible keyboard focus
+   - predictable Tab navigation
+   - optional ArrowUp/ArrowDown navigation only if implemented correctly
+
+3. MAIN REVIEW PANEL
+
+   Show only one active review section in Focused mode.
+
+   The panel contains:
+
+   - Current step and progress: “Step 2 of 4”
+   - Plain-language section heading
+   - One-sentence explanation of what this section means
+   - Claims with confidence labels
+   - “View supporting evidence” per claim
+   - Collapsed “Technical details” disclosure for raw paths, symbols and
+     commands
+
+   Do not place a long file list in the primary reading text. Preserve it inside
+   technical details and evidence.
+
+   Do not fabricate a summary. Any simplified text must be a deterministic
+   presentation of existing claims and context fields.
+
+4. CONTEXT LIMITATION
+
+   Replace the enormous yellow warning block with a compact context banner:
+
+   “This review has redacted context”
+
+   Supporting text:
+   “Some checkpoint information was unavailable or redacted. Findings below
+   are limited to the evidence that could be verified.”
+
+   Provide a “Why is this incomplete?” disclosure containing every exact reason.
+
+   Preserve every reason and warning. Change only presentation, not evidence.
+
+5. CHECKPOINT METADATA
+
+   Show checkpoint, session and commit as compact metadata.
+
+   Use monospace text and truncate long identifiers visually with an accessible
+   full-value title or disclosure. Provide a copy button only if it can be
+   implemented without unnecessary complexity.
+
+6. EVIDENCE
+
+   On wide screens use a right-side evidence rail labelled:
+
+   “Evidence · <count> sources”
+
+   Keep it collapsed or summarized initially. Opening evidence must reveal:
+
+   - Evidence ID
+   - Human-readable kind
+   - Confidence
+   - Locator
+   - Retrieval command
+   - Excerpt
+
+   Translate labels for display only:
+   - checkpoint_metadata → Checkpoint metadata
+   - checkpoint_transcript → Checkpoint transcript
+   - git_diff → Git diff
+   - graph_impact → Graph impact
+   - graph_warning → Graph limitation
+
+   Preserve original raw values in the ReviewBundle.
+
+   On smaller screens, evidence becomes an in-flow drawer below the active card.
+
+7. CONTINUE SAFELY
+
+   Present continuation as one compact secondary panel directly after the
+   active review.
+
+   Heading: “Continue safely”
+   Explain that these are evidence-backed next steps.
+   Preserve the exact continuation claim and source link.
+
+8. STICKY VOICE DOCK
+
+   Keep voice controls visible at the bottom.
+
+   Primary controls:
+   - Previous
+   - Play/Pause
+   - Next
+
+   Secondary controls:
+   - Repeat
+   - Stop
+   - Read evidence
+   - Speech rate
+
+   Display:
+   - “Step X of 4”
+   - current card name
+   - concise “What will be spoken” preview
+   - “Local voice ready” or “Local voice unavailable”
+
+   Do not show “180 local browser voices are available.” The exact count has no
+   user value.
+
+   Never auto-play, auto-advance or begin listening.
+   Only use voices where voice.localService === true.
+   Preserve text fallback when no local voice exists.
+
+   Selecting Previous/Next changes the active card but must not automatically
+   start speech.
+
+9. DEVELOPMENT FIXTURE
+
+   Do not show “Use included fixture (development only)” as a prominent
+   production action.
+
+   Keep fixture functionality available for tests and development:
+   - automatically show a small “Development fixture” indicator when
+     ?mode=fixture is present;
+   - offer fixture recovery only in the unavailable/error state;
+   - do not display it in the normal successful review path.
+
+MICROINTERACTIONS
+
+Use restrained 160–200ms transitions for:
+
+- navigation selection
+- button hover/pressed state
+- evidence disclosure
+- context disclosure
+- active-card change
+- voice playing/paused state
+
+Prefer background, border and opacity transitions. Avoid large movement,
+parallax, bouncing, continuous animation and layout shifts.
+
+Implement:
+
+- active navigation background: var(--entire-accent-soft)
+- active indicator: var(--entire-accent)
+- hover background: var(--entire-surface-muted)
+- pressed state without dramatic scaling
+- 3px accessible violet focus ring with sufficient offset
+- play button state change between Play and Pause
+- subtle progress movement between steps
+
+Under prefers-reduced-motion: reduce, disable all non-essential transitions and
+animations.
+
+RESPONSIVE BEHAVIOR
+
+Desktop, at least 1180px:
+- left navigation
+- main review
+- right evidence rail
+- sticky voice dock
+
+Tablet:
+- narrower left navigation
+- main review
+- evidence becomes an in-flow drawer
+
+Mobile, 375px:
+- top header wraps cleanly
+- four-step navigation becomes a horizontal, scrollable or compact step
+  navigator
+- no horizontal page overflow
+- voice dock becomes a compact two-row control surface
+- all touch targets at least 44×44px
+- metadata wraps without clipping
+- technical content scrolls inside its own container only when necessary
+
+ACCESSIBILITY REQUIREMENTS
+
+Preserve or improve:
+
+- skip link
+- semantic header, nav, main, sections and footer/control region
+- logical heading order
+- visible focus
+- full keyboard operation
+- screen-reader announcements that are short and non-repetitive
+- aria-live only for meaningful short state updates
+- minimum WCAG AA contrast
+- zoom at 200%
+- high readability and generous line height
+- no color-only information
+- no auto-focus
+- no auto-scroll
+- no auto-advance
+- no auto-speech
+- Focused and Detailed reading modes
+- safe textContent-based insertion of untrusted checkpoint content
+
+Do not use innerHTML for ReviewBundle content.
+
+PRIVACY INVARIANTS
+
+Do not weaken:
+
+- loopback-only 127.0.0.1 binding
+- GET-only review API
+- CSP and no-store headers
+- no external network requests
+- no raw prompt/transcript transmission
+- local-only browser voices
+- explicit complete/partial/redacted/unavailable status
+- reasons required for incomplete states
+- evidence-confidence downgrade
+- no authoritative claim when evidence is incomplete
+
+STARTUP FEEDBACK
+
+The real checkpoint can take roughly 50 seconds because Graph impact queries
+run before the server starts.
+
+Add a small, low-risk terminal progress message before review construction in
+web mode, such as:
+
+“Building the review locally. Graph checks may take up to 50 seconds…”
+
+Do not change Graph execution or concurrency during this UI-polish pass.
+Keep the existing bounded behavior.
+
+DOCUMENTATION CORRECTIONS
+
+Update docs/buildathon/BUILDATHON.md:
+
+- Define the intended user as developers with dyslexia, ADHD, reading fatigue,
+  or people taking over AI-assisted work.
+- Replace the outdated statement that validated build/install commands are not
+  available.
+- Replace “For a future demo” with the real completed demo evidence.
+- Remove next steps that say the evidence model or renderers still need to be
+  implemented.
+- Add final checkpoint:
+  01M1TT0JM52PSW57NAWDF968CZ
+- Add final merge SHA before this polish:
+  79518ac9349b6cf1e104b1a9c534c2d07a69f6fe
+- Add repository and PR #5 links.
+- Keep Databricks explicitly marked as not used/not opting in.
+- Add the UI-polish verification once completed.
+
+TESTING
+
+Update existing tests rather than deleting assertions.
+
+Run:
+
+- mise exec go@1.26 -- gofmt -w on changed Go files
+- mise exec go@1.26 -- go test ./cmd/entire-echo/...
+- mise exec go@1.26 -- go vet ./cmd/entire-echo/...
+- mise exec go@1.26 -- go build -o /tmp/entire-echo ./cmd/entire-echo
+- node --check cmd/entire-echo/internal/webui/assets/app.js
+- git diff --check
+
+BROWSER QA
+
+Run the actual local product against:
+01M1TRSZQWG883KZG05QH9VX7N
+
+Test the flow:
+
+app loads
+→ redacted context is immediately understood
+→ select Implemented
+→ inspect technical details
+→ open linked evidence
+→ play/pause local speech
+→ select Next
+→ confirm no automatic speech
+→ read evidence
+→ switch Focused/Detailed mode
+→ keyboard navigate
+→ stop speech
+
+Verify:
+
+- desktop viewport
+- 375px mobile viewport
+- no clipping or horizontal overflow
+- no console errors
+- meaningful initial viewport
+- visible focus
+- all controls work
+- local voice privacy remains intact
+- fixture/error mode remains usable
+
+Capture before and after screenshots outside the repository. Compare:
+
+- hierarchy
+- typography
+- palette
+- container model
+- readability
+- evidence disclosure
+- voice accessibility
+- responsive behavior
+
+Use the approved concept direction as the visual target. Keep a short fidelity
+ledger describing mismatches found and fixed.
+
+FINAL GRAPH WORK
+
+After implementation:
+
+- inspect entire graph diff --help;
+- if the installed Graph CLI supports worktree semantic diff, run it against
+  base commit 79518ac9349b6cf1e104b1a9c534c2d07a69f6fe;
+- otherwise state that commit-to-commit semantic diff must run after the polish
+  commit is created;
+- verify findings against Git diff, source and tests.
+
+Do not commit.
+
+Report:
+
+- pre-edit Graph findings
+- visual/design changes
+- interaction changes
+- accessibility behavior
+- privacy invariants
+- responsive results
+- exact tests and results
+- browser QA
+- files changed
+- documentation corrections
+- remaining risks
+- git status

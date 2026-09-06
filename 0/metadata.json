@@ -1,0 +1,54 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TWEGCRSVJ9HZCD7RH7CD84",
+  "session_id": "01a0757e-0f49-7b50-9d65-56ef02510d94",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T08:13:10.808789Z",
+  "branch": "feature/echo-final-ui-polish",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "cmd/entire-echo/internal/webui/assets/app.js",
+    "cmd/entire-echo/internal/webui/assets/index.html",
+    "cmd/entire-echo/internal/webui/assets/styles.css",
+    "cmd/entire-echo/main.go",
+    "docs/buildathon/BUILDATHON.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "a85e71d7c2f2",
+  "checkpoint_transcript_start": 664,
+  "transcript_lines_at_start": 664,
+  "compact_transcript_start": 92,
+  "token_usage": {
+    "input_tokens": 103821,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 5953536,
+    "output_tokens": 18455,
+    "api_call_count": 32
+  },
+  "session_metrics": {
+    "turn_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T08:13:10.429406Z",
+    "agent_lines": 65,
+    "agent_removed": 378,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 65,
+    "total_lines_changed": 443,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
