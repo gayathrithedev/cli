@@ -1,0 +1,100 @@
+Perform the final post-UI-polish verification for Entire Echo.
+
+UI checkpoint:
+- Commit: d29575706a75e0cfff984f01ec55843043386ba1
+- Checkpoint: 01M1TWEGCRSVJ9HZCD7RH7CD84
+
+Previous submitted baseline:
+- Commit: 79518ac9349b6cf1e104b1a9c534c2d07a69f6fe
+
+The completed Entire Graph semantic diff is stored at:
+
+/tmp/entire-echo-ui-semantic-diff.json
+
+Do not assume Graph findings are correct. Read the full JSON and verify every
+material finding against source, tests and runtime behavior.
+
+Tasks:
+
+1. Summarize the semantic diff:
+   - changed files
+   - added functions
+   - removed functions
+   - signature changes
+   - body changes
+   - dependency counts
+   - warnings, partial failures or completeness limitations
+
+2. Carefully verify Graph’s high-dependency findings:
+   - `$`
+   - `button`
+   - `validateBundle`
+   - `element` removal
+   - `el` addition
+   - renderBundle
+   - renderCards
+   - renderContext
+   - updateActiveCard
+   - updateSpeechControls
+   - speak
+   - localVoices
+
+3. Determine whether the reported signature changes are:
+   - real behavior/contract changes;
+   - internal parameter renames;
+   - formatting/parser noise; or
+   - potentially unsafe.
+
+4. Verify that:
+   - every renamed helper has all callers updated;
+   - no stale call to element remains;
+   - window.EchoUI keeps the test-facing functions required by existing tests;
+   - ReviewBundle validation behavior is unchanged;
+   - active-card navigation works;
+   - speech still uses only localService === true;
+   - selecting another card never starts speech automatically;
+   - evidence disclosure keeps exact evidence linkage;
+   - incomplete context remains clearly non-authoritative;
+   - no external request or asset was introduced.
+
+5. Inspect app.js maintainability.
+
+   If the UI rewrite unnecessarily minified the source, collapsed large
+   functions into unreadable lines, or shortened names only to reduce size,
+   restore readable formatting and descriptive internal names while preserving
+   the polished UI.
+
+   Do not make cosmetic refactors unless they materially improve judge
+   readability or eliminate misleading Graph signature changes.
+
+6. Run:
+   - mise exec go@1.26 -- go test ./cmd/entire-echo/...
+   - mise exec go@1.26 -- go vet ./cmd/entire-echo/...
+   - mise exec go@1.26 -- go build -o /tmp/entire-echo ./cmd/entire-echo
+   - node --check cmd/entire-echo/internal/webui/assets/app.js
+   - git diff --check
+
+7. Update docs/buildathon/BUILDATHON.md with:
+   - UI checkpoint 01M1TWEGCRSVJ9HZCD7RH7CD84
+   - exact semantic-diff base and head commits
+   - material Graph findings
+   - which findings were verified as internal/UI-only
+   - any Graph limitations
+   - the successful real-checkpoint UI and voice test
+   - final Entire-style guided UI behavior
+   - remaining honest limitations
+
+8. Audit BUILDATHON.md against the required submission outline and remove stale
+   statements that describe already-completed implementation as future work.
+
+Do not commit.
+
+Report:
+- semantic-diff summary
+- high-dependency verification
+- whether app.js required readability changes
+- documentation changes
+- test results
+- changed files
+- remaining risks
+- git status
