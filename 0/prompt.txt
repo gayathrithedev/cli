@@ -1,0 +1,83 @@
+Implement the P0 core of Entire Echo on branch feature/echo-core.
+
+Read docs/buildathon/initial-architecture.md before making changes.
+
+Repository ownership for this branch:
+- Entire Echo Go entry point
+- checkpoint acquisition
+- Git diff acquisition
+- Entire Graph command adapter
+- evidence/review data model
+- deterministic synthesis
+- terminal and JSON rendering
+- unit tests
+
+Do not implement the browser UI assets. Another developer owns those.
+
+Before editing:
+
+1. Run `entire checkpoint explain --help`, `entire checkpoint list --help`,
+   and `entire graph --help`.
+2. Treat the architecture’s CLI flags as assumptions until the installed CLI
+   and repository source confirm them.
+3. Use Entire Graph definition/search to locate:
+   - external plugin resolution and MaybeRunPlugin,
+   - checkpoint explain command construction,
+   - checkpoint JSON/transcript output,
+   - worktree-root and subprocess execution conventions.
+4. Verify every Graph result by reading the source and relevant tests.
+5. Before modifying any existing high-risk symbol, run Graph impact analysis
+   on the exact resolved symbol.
+
+Implementation requirements:
+
+1. Follow the repository’s external-command convention and produce an
+   executable named `entire-echo`.
+2. Prefer a self-contained location such as cmd/entire-echo only if verified
+   against repository conventions.
+3. Resolve exactly one checkpoint ID or commit.
+4. Acquire checkpoint metadata and transcript only through confirmed public
+   Entire CLI contracts.
+5. Acquire the associated Git diff from the repository root.
+6. Query Entire Graph only with focused, read-only questions derived from
+   changed files or symbols.
+7. Introduce a CommandRunner interface so tests can use fake command output.
+8. Never invoke commands through a shell string.
+9. Fail safely when checkpoint data is malformed or ambiguous.
+10. Graph failure must produce “Graph evidence unavailable”; it must never be
+    interpreted as “no impact.”
+11. Produce a versioned ReviewBundle JSON model containing:
+    - target checkpoint/session/commit,
+    - overview,
+    - requested,
+    - implemented,
+    - missing or uncertain,
+    - potentially affected,
+    - continuation,
+    - typed evidence records,
+    - warnings.
+12. Every claim must reference evidence IDs.
+13. Provide `--json` output and a linear accessible terminal renderer.
+14. Do not use an LLM for P0 synthesis. Use deterministic templates.
+15. Do not edit unrelated existing CLI behavior.
+
+Testing:
+
+- Unit-test parsers using fixtures.
+- Unit-test malformed and missing checkpoint data.
+- Unit-test unavailable and partial Graph results.
+- Unit-test that every factual claim has evidence.
+- Unit-test deterministic output.
+- Build the binary.
+- Smoke-test against checkpoint:
+  01M1TJJ89073T6Z2P4RSMDBKDS
+- Run focused Go tests and `git diff --check`.
+
+Do not commit.
+At completion report:
+- Graph commands and findings,
+- source files used for verification,
+- files changed,
+- tests executed,
+- confirmed behavior,
+- assumptions and remaining risks.
