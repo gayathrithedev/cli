@@ -10,9 +10,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -71,20 +74,55 @@ type Target struct {
 	Commit       string `json:"commit,omitempty"`
 }
 
+// ContextCompleteness identifies how much of the checkpoint evidence was
+// available to construct this review. Reasons are required whenever Status is
+// not complete; consumers must never imply that incomplete evidence is a
+// complete or authoritative reconstruction.
+type ContextCompleteness struct {
+	Status  string   `json:"status"`
+	Reasons []string `json:"reasons,omitempty"`
+}
+
+const (
+	contextComplete    = "complete"
+	contextPartial     = "partial"
+	contextRedacted    = "redacted"
+	contextUnavailable = "unavailable"
+)
+
 type ReviewBundle struct {
-	SchemaVersion       string     `json:"schema_version"`
-	Target              Target     `json:"target"`
-	Overview            Claim      `json:"overview"`
-	Requested           []Claim    `json:"requested"`
-	Implemented         []Claim    `json:"implemented"`
-	MissingOrUncertain  []Claim    `json:"missing_or_uncertain"`
-	PotentiallyAffected []Claim    `json:"potentially_affected"`
-	Continuation        []Claim    `json:"continuation"`
-	Evidence            []Evidence `json:"evidence"`
-	Warnings            []Warning  `json:"warnings"`
+	SchemaVersion       string              `json:"schema_version"`
+	Target              Target              `json:"target"`
+	Context             ContextCompleteness `json:"context"`
+	Overview            Claim               `json:"overview"`
+	Requested           []Claim             `json:"requested"`
+	Implemented         []Claim             `json:"implemented"`
+	MissingOrUncertain  []Claim             `json:"missing_or_uncertain"`
+	PotentiallyAffected []Claim             `json:"potentially_affected"`
+	Continuation        []Claim             `json:"continuation"`
+	Evidence            []Evidence          `json:"evidence"`
+	Warnings            []Warning           `json:"warnings"`
 }
 
 type builder struct{ bundle ReviewBundle }
+
+func (b *builder) limitContext(status, reason string) {
+	for _, existing := range b.bundle.Context.Reasons {
+		if existing == reason {
+			return
+		}
+	}
+	b.bundle.Context.Reasons = append(b.bundle.Context.Reasons, reason)
+	priority := map[string]int{contextComplete: 0, contextPartial: 1, contextRedacted: 2, contextUnavailable: 3}
+	if priority[status] > priority[b.bundle.Context.Status] {
+		b.bundle.Context.Status = status
+	}
+}
+
+func transcriptRedacted(raw []byte) bool {
+	text := strings.ToLower(string(raw))
+	return strings.Contains(text, "[redacted]") || strings.Contains(text, "<redacted>") || strings.Contains(text, "[redaction]")
+}
 
 func (b *builder) evidence(kind, locator string, command []string, excerpt, confidence string) string {
 	id := fmt.Sprintf("E%03d", len(b.bundle.Evidence)+1)
@@ -214,9 +252,9 @@ func diffSymbols(diff string) []symbol {
 }
 
 func associatedCommit(ctx context.Context, r CommandRunner, root, checkpointID string) (string, string) {
-	out, stderr, err := r.Run(ctx, "git", []string{"log", "--all", "--format=%H", "--fixed-strings", "--grep=Entire-Checkpoint: " + checkpointID}, root)
+	out, _, err := r.Run(ctx, "git", []string{"log", "--all", "--format=%H", "--fixed-strings", "--grep=Entire-Checkpoint: " + checkpointID}, root)
 	if err != nil {
-		return "", "could not resolve checkpoint commit: " + strings.TrimSpace(string(stderr))
+		return "", "could not resolve checkpoint commit"
 	}
 	commits := uniqueStrings(strings.Split(string(out), "\n"))
 	if len(commits) != 1 {
@@ -238,24 +276,30 @@ func build(ctx context.Context, r CommandRunner, cwd, target string) (ReviewBund
 		return ReviewBundle{}, err
 	}
 	index, sessionID := latestSession(meta)
-	b := builder{bundle: ReviewBundle{SchemaVersion: schemaVersion, Target: Target{CheckpointID: meta.CheckpointID, SessionID: sessionID}}}
+	b := builder{bundle: ReviewBundle{SchemaVersion: schemaVersion, Target: Target{CheckpointID: meta.CheckpointID, SessionID: sessionID}, Context: ContextCompleteness{Status: contextComplete}}}
 	metaID := b.evidence("checkpoint_metadata", "checkpoint:"+meta.CheckpointID, []string{"entire", "checkpoint", "explain", target, "--json"}, string(metaOut), "confirmed")
 
-	rootOut, rootErr, rootRunErr := r.Run(ctx, "git", []string{"rev-parse", "--show-toplevel"}, cwd)
+	rootOut, _, rootRunErr := r.Run(ctx, "git", []string{"rev-parse", "--show-toplevel"}, cwd)
 	root := strings.TrimSpace(string(rootOut))
 	if rootRunErr != nil || root == "" {
-		warnID := b.evidence("warning", "git:worktree-root", []string{"git", "rev-parse", "--show-toplevel"}, string(rootErr), "question")
+		warnID := b.evidence("warning", "git:worktree-root", []string{"git", "rev-parse", "--show-toplevel"}, "repository root was unavailable", "question")
 		b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Git diff unavailable: repository root could not be resolved.", EvidenceIDs: []string{warnID}})
+		b.limitContext(contextPartial, "Git worktree root was unavailable, so commit and diff evidence could not be reconstructed.")
 	}
 
-	transcript, transcriptErr, transcriptRunErr := r.Run(ctx, "entire", []string{"checkpoint", "explain", target, "--transcript", "--session-index", fmt.Sprint(index)}, cwd)
+	transcript, _, transcriptRunErr := r.Run(ctx, "entire", []string{"checkpoint", "explain", target, "--transcript", "--session-index", fmt.Sprint(index)}, cwd)
 	if transcriptRunErr != nil || len(strings.TrimSpace(string(transcript))) == 0 {
-		warnID := b.evidence("warning", "checkpoint:"+meta.CheckpointID+"/transcript", []string{"entire", "checkpoint", "explain", target, "--transcript", "--session-index", fmt.Sprint(index)}, string(transcriptErr), "question")
+		warnID := b.evidence("warning", "checkpoint:"+meta.CheckpointID+"/transcript", []string{"entire", "checkpoint", "explain", target, "--transcript", "--session-index", fmt.Sprint(index)}, "stored transcript was unavailable", "question")
 		b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Transcript reconstruction unavailable.", EvidenceIDs: []string{warnID}})
 		b.bundle.MissingOrUncertain = append(b.bundle.MissingOrUncertain, Claim{Text: "Requested and implemented details may be incomplete because the stored transcript was unavailable.", EvidenceIDs: []string{warnID}, Confidence: "question"})
+		b.limitContext(contextUnavailable, "Stored checkpoint transcript was unavailable.")
 	} else {
 		transcriptID := b.evidence("checkpoint_transcript", "checkpoint:"+meta.CheckpointID+"/session:"+sessionID, []string{"entire", "checkpoint", "explain", target, "--transcript", "--session-index", fmt.Sprint(index)}, string(transcript), "confirmed")
 		b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Transcript evidence is stored-session output; its checkpoint scope is not exposed by the public export contract.", EvidenceIDs: []string{transcriptID}})
+		if transcriptRedacted(transcript) {
+			b.limitContext(contextRedacted, "Stored checkpoint transcript contains redacted content.")
+			b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Transcript evidence includes redacted content; the reconstruction is not complete.", EvidenceIDs: []string{transcriptID}})
+		}
 		requested, implemented := 0, 0
 		for _, entry := range transcriptEntries(transcript) {
 			claim := Claim{Text: "Stored transcript text: " + bound(entry.text, 240), EvidenceIDs: []string{transcriptID}, Confidence: "confirmed"}
@@ -269,6 +313,7 @@ func build(ctx context.Context, r CommandRunner, cwd, target string) (ReviewBund
 		}
 		if requested == 0 {
 			b.bundle.MissingOrUncertain = append(b.bundle.MissingOrUncertain, Claim{Text: "No user request could be extracted from the stored transcript.", EvidenceIDs: []string{transcriptID}, Confidence: "question"})
+			b.limitContext(contextPartial, "No user request could be extracted from the stored transcript.")
 		}
 	}
 
@@ -277,12 +322,14 @@ func build(ctx context.Context, r CommandRunner, cwd, target string) (ReviewBund
 		if warning != "" {
 			id := b.evidence("warning", "checkpoint:"+meta.CheckpointID+"/commit", []string{"git", "log", "--all", "--format=%H", "--fixed-strings", "--grep=Entire-Checkpoint: " + meta.CheckpointID}, warning, "question")
 			b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Git diff unavailable: " + warning + ".", EvidenceIDs: []string{id}})
+			b.limitContext(contextPartial, "Associated checkpoint commit could not be resolved unambiguously.")
 		} else {
 			b.bundle.Target.Commit = commit
-			diff, diffErr, diffRunErr := r.Run(ctx, "git", []string{"diff", "--find-renames", commit + "^", commit, "--"}, root)
+			diff, _, diffRunErr := r.Run(ctx, "git", []string{"diff", "--find-renames", commit + "^", commit, "--"}, root)
 			if diffRunErr != nil {
-				id := b.evidence("warning", "commit:"+commit, []string{"git", "diff", "--find-renames", commit + "^", commit, "--"}, string(diffErr), "question")
+				id := b.evidence("warning", "commit:"+commit, []string{"git", "diff", "--find-renames", commit + "^", commit, "--"}, "associated commit diff was unavailable", "question")
 				b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Git diff unavailable for associated commit.", EvidenceIDs: []string{id}})
+				b.limitContext(contextPartial, "Associated commit diff was unavailable.")
 			} else {
 				diffID := b.evidence("git_diff", "commit:"+commit, []string{"git", "diff", "--find-renames", commit + "^", commit, "--"}, string(diff), "confirmed")
 				files := uniqueStrings(append(meta.FilesTouched, changedFiles(string(diff))...))
@@ -323,16 +370,18 @@ func (b *builder) graph(ctx context.Context, r CommandRunner, root string, symbo
 	for _, s := range symbols {
 		queryCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		args := []string{"graph", "impact", "--repo", root, "--symbol", s.name, "--file", s.file, "--depth", "1", "--limit", "10", "--format", "json"}
-		out, stderr, err := r.Run(queryCtx, "entire", args, root)
+		out, _, err := r.Run(queryCtx, "entire", args, root)
 		cancel()
 		if err != nil || len(strings.TrimSpace(string(out))) == 0 {
-			id := b.evidence("graph_warning", "symbol:"+s.file+":"+s.name, append([]string{"entire"}, args...), string(stderr), "question")
+			id := b.evidence("graph_warning", "symbol:"+s.file+":"+s.name, append([]string{"entire"}, args...), "Entire Graph impact evidence was unavailable", "question")
 			b.bundle.Warnings = append(b.bundle.Warnings, Warning{Text: "Graph evidence unavailable for " + s.name + ".", EvidenceIDs: []string{id}})
+			b.limitContext(contextPartial, "Entire Graph impact evidence was unavailable for "+s.name+".")
 			continue
 		}
 		confidence := "potential"
 		if strings.Contains(strings.ToLower(string(out)), "partial") || strings.Contains(strings.ToLower(string(out)), "warning") {
 			confidence = "question"
+			b.limitContext(contextPartial, "Entire Graph impact evidence was partial for "+s.name+".")
 		}
 		id := b.evidence("graph_impact", "symbol:"+s.file+":"+s.name, append([]string{"entire"}, args...), string(out), confidence)
 		b.bundle.PotentiallyAffected = append(b.bundle.PotentiallyAffected, Claim{Text: "Potential static impact for " + s.name + " in " + s.file + ".", EvidenceIDs: []string{diffID, id}, Confidence: confidence})
@@ -340,6 +389,21 @@ func (b *builder) graph(ctx context.Context, r CommandRunner, root string, symbo
 }
 
 func validateBundle(bundle ReviewBundle) error {
+	if bundle.SchemaVersion != schemaVersion {
+		return errors.New("unsupported review bundle schema")
+	}
+	switch bundle.Context.Status {
+	case contextComplete:
+		if len(bundle.Context.Reasons) != 0 {
+			return errors.New("complete context cannot have incompleteness reasons")
+		}
+	case contextPartial, contextRedacted, contextUnavailable:
+		if len(bundle.Context.Reasons) == 0 {
+			return errors.New("non-complete context must state a reason")
+		}
+	default:
+		return errors.New("invalid context completeness status")
+	}
 	evidence := map[string]bool{}
 	for _, e := range bundle.Evidence {
 		if e.ID == "" || evidence[e.ID] {
@@ -377,7 +441,14 @@ func validateBundle(bundle ReviewBundle) error {
 
 func renderText(b ReviewBundle) string {
 	var out strings.Builder
-	fmt.Fprintf(&out, "Entire Echo review\n\n%s\n", b.Overview.Text)
+	fmt.Fprintf(&out, "Entire Echo review\nContext: %s", b.Context.Status)
+	if len(b.Context.Reasons) > 0 {
+		out.WriteString("\nContext reasons:\n")
+		for _, reason := range b.Context.Reasons {
+			fmt.Fprintf(&out, "- %s\n", reason)
+		}
+	}
+	fmt.Fprintf(&out, "\n%s\n", b.Overview.Text)
 	for _, section := range []struct {
 		name   string
 		claims []Claim
@@ -405,19 +476,31 @@ func renderText(b ReviewBundle) string {
 
 func main() {
 	jsonOutput := flag.Bool("json", false, "write the versioned ReviewBundle JSON")
+	webOutput := flag.Bool("web", false, "serve the review in a local browser interface")
+	port := flag.Int("port", 0, "loopback port for --web (0 selects an available port)")
+	openBrowser := flag.Bool("open", false, "open the local review URL when --web starts")
 	flag.Parse()
-	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: entire-echo [--json] <checkpoint-id-or-commit>")
+	if flag.NArg() != 1 || (*jsonOutput && *webOutput) || (*openBrowser && !*webOutput) || *port < 0 || *port > 65535 {
+		fmt.Fprintln(os.Stderr, "usage: entire-echo [--json | --web [--port PORT] [--open]] <checkpoint-id-or-commit>")
 		os.Exit(2)
 	}
-	bundle, err := build(context.Background(), execRunner{}, mustGetwd(), flag.Arg(0))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	bundle, err := build(ctx, execRunner{}, mustGetwd(), flag.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "entire echo:", err)
+		fmt.Fprintln(os.Stderr, "entire echo: could not build the review. Verify the checkpoint target with 'entire checkpoint explain <target> --json'.")
 		os.Exit(1)
 	}
 	if *jsonOutput {
 		data, _ := json.MarshalIndent(bundle, "", "  ")
 		fmt.Println(string(data))
+		return
+	}
+	if *webOutput {
+		if err := serveWeb(ctx, bundle, *port, *openBrowser, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "entire echo:", err)
+			os.Exit(1)
+		}
 		return
 	}
 	fmt.Print(renderText(bundle))
@@ -429,4 +512,15 @@ func mustGetwd() string {
 		return "."
 	}
 	return wd
+}
+
+func browserCommand(url string) (string, []string, bool) {
+	switch runtime.GOOS {
+	case "darwin":
+		return "open", []string{url}, true
+	case "windows":
+		return "rundll32", []string{"url.dll,FileProtocolHandler", url}, true
+	default:
+		return "xdg-open", []string{url}, true
+	}
 }

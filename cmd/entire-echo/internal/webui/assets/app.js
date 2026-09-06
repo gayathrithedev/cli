@@ -8,7 +8,7 @@
     ["Potentially affected", "potentially_affected"]
   ];
   const $ = (id) => document.getElementById(id);
-  const state = { bundle: null, cards: [], active: 0, rate: 1, speaking: false, paused: false, supported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window };
+  const state = { bundle: null, cards: [], active: 0, rate: 1, speaking: false, paused: false, supported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window, voices: [] };
 
   function element(name, text, className) {
     const node = document.createElement(name);
@@ -29,6 +29,8 @@
     if (!bundle || typeof bundle !== "object") throw new Error("Review data is not an object.");
     if (bundle.schema_version !== "entire-echo.review-bundle/v1") throw new Error("Review data has an unsupported or missing schema version.");
     if (!bundle.target || !bundle.target.checkpoint_id || !bundle.target.session_id) throw new Error("Review data is missing checkpoint or session identifiers.");
+    if (!bundle.context || !["complete", "partial", "redacted", "unavailable"].includes(bundle.context.status)) throw new Error("Review data has an invalid context completeness status.");
+    if (bundle.context.status !== "complete" && (!Array.isArray(bundle.context.reasons) || bundle.context.reasons.length === 0)) throw new Error("Incomplete review data must explain why it is incomplete.");
     if (!Array.isArray(bundle.evidence)) throw new Error("Review data is missing evidence.");
     const ids = new Set(bundle.evidence.map((item) => item && item.id));
     if (ids.has(undefined) || ids.has("")) throw new Error("Review data has evidence without an ID.");
@@ -68,6 +70,13 @@
     [["Checkpoint", target.checkpoint_id], ["Session", target.session_id], ["Commit", target.commit || "Unavailable"]].forEach(([name, value]) => {
       node.append(element("dt", name), element("dd", value));
     });
+  }
+  function renderContext(context) {
+    const reasons = context.reasons || [];
+    const label = context.status === "complete" ? "Context complete." : `Context ${context.status}: ${reasons.join(" ")}`;
+    const node = $("context-state");
+    node.textContent = label;
+    node.dataset.status = context.status;
   }
   function activeCard() { return state.cards[state.active]; }
   function updateActiveCard(announce) {
@@ -130,6 +139,7 @@
     state.bundle = bundle;
     $("load-state").textContent = source === "fixture" ? "Showing the included development fixture." : "Showing review data from /api/review.";
     renderTarget(bundle.target);
+    renderContext(bundle.context);
     const overview = $("overview"); overview.replaceChildren(element("p", bundle.overview.text), sourceControl(bundle.overview.evidence_ids));
     renderCards(bundle);
     const continuation = $("continuation"); continuation.replaceChildren(claimList(bundle.continuation || [], "No continuation claim was supplied."));
@@ -140,6 +150,8 @@
     state.bundle = null; state.cards = [];
     $("load-state").textContent = `Review data is unavailable: ${message}`;
     ["target", "overview", "cards", "continuation", "evidence", "warnings"].forEach((id) => $(id).replaceChildren());
+    $("context-state").textContent = "Context unavailable: review data could not be loaded.";
+    $("context-state").dataset.status = "unavailable";
     $("active-card").textContent = "No card is active.";
     $("warnings").append(element("p", "The text interface remains available. Select “Use included fixture” to inspect the interface with local example data.", "warning"));
     updateSpeechControls(); setStatus("Review data is unavailable.");
@@ -156,7 +168,9 @@
   function speechText(card) {
     if (!card) return "No review card is available.";
     const claims = card.claims.length ? card.claims.map((claim) => claim.text).join(" ") : "No claim was established from the available evidence.";
-    return `${card.title}. ${claims}`;
+    const context = state.bundle && state.bundle.context;
+    const qualification = context && context.status !== "complete" ? `Context ${context.status}. ${(context.reasons || []).join(" ")} ` : "";
+    return `${qualification}${card.title}. ${claims}`;
   }
   function updateSpeechPreview() { $("speech-preview").textContent = `What will be spoken: ${speechText(activeCard())}`; }
   function updateSpeechControls() {
@@ -166,13 +180,17 @@
     $("stop").disabled = !state.supported || !state.speaking;
     $("pause-resume").textContent = state.paused ? "Resume" : "Pause";
     $("speech-rate").textContent = `Rate: ${state.rate.toFixed(1)}×`;
-    $("speech-state").textContent = state.supported ? "Speech is available. It starts only when you select a reading control." : "Speech synthesis is unavailable in this browser. The complete review remains available as text.";
+    const localVoiceText = state.voices.length ? ` ${state.voices.length} local browser voice${state.voices.length === 1 ? " is" : "s are"} available.` : " No local browser voice is available.";
+    $("speech-state").textContent = state.supported ? `Speech uses only local browser voices and starts only when you select a reading control.${localVoiceText}` : "Speech synthesis is unavailable in this browser. The review remains available as text.";
     updateSpeechPreview();
   }
   function speak(text, label) {
     if (!state.supported || !text) return;
     window.speechSynthesis.cancel();
+    const voice = state.voices[0];
+    if (!voice) { setStatus("No local browser voice is available. The review remains available as text."); return; }
     const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = voice;
     utterance.rate = state.rate;
     utterance.onstart = () => { state.speaking = true; state.paused = false; updateSpeechControls(); setStatus(`Reading ${label}.`); };
     utterance.onend = () => { state.speaking = false; state.paused = false; updateSpeechControls(); setStatus("Reading finished."); };
@@ -198,7 +216,10 @@
     $("pause-resume").addEventListener("click", () => { if (state.paused) { window.speechSynthesis.resume(); state.paused = false; setStatus("Speech resumed."); } else { window.speechSynthesis.pause(); state.paused = true; setStatus("Speech paused."); } updateSpeechControls(); });
     $("stop").addEventListener("click", () => { window.speechSynthesis.cancel(); state.speaking = false; state.paused = false; updateSpeechControls(); setStatus("Speech stopped."); });
   }
-  window.EchoUI = { load, renderBundle, showUnavailable, state };
+  function localVoices(voices) { return (voices || []).filter((voice) => voice && voice.localService === true); }
+  function refreshVoices() { state.voices = localVoices(window.speechSynthesis.getVoices()); updateSpeechControls(); }
+  window.EchoUI = { load, renderBundle, showUnavailable, state, localVoices };
   bindControls(); updateSpeechControls();
+  if (state.supported) { refreshVoices(); window.speechSynthesis.addEventListener("voiceschanged", refreshVoices); }
   load(new URLSearchParams(window.location.search).get("mode") === "fixture" ? "fixture" : "production");
 })();
