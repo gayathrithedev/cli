@@ -1,0 +1,66 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "01M1TRSZQWG883KZG05QH9VX7N",
+  "session_id": "01a0757e-0f49-7b50-9d65-56ef02510d94",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-06T07:09:32.963135Z",
+  "branch": "feature/echo-privacy-integration",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "cmd/entire-echo/internal/webui/assets/app.js",
+    "cmd/entire-echo/internal/webui/assets/index.html",
+    "cmd/entire-echo/internal/webui/assets/styles.css",
+    "cmd/entire-echo/main.go",
+    "cmd/entire-echo/main_test.go",
+    "cmd/entire-echo/testdata/organizer/README.md",
+    "cmd/entire-echo/testdata/review-bundle-missing-context.synthetic.json",
+    "cmd/entire-echo/web.go",
+    "cmd/entire-echo/web_test.go",
+    "docs/buildathon/BUILDATHON.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "c1485b8c5b58",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 99312,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2604288,
+    "output_tokens": 18214,
+    "api_call_count": 39
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-06T07:09:32.800994Z",
+    "agent_lines": 351,
+    "agent_removed": 34,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 5,
+    "total_committed": 351,
+    "total_lines_changed": 390,
+    "agent_percentage": 98.71794871794873,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 167,
+      "user_lines_removed": 5,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "cmd/entire-echo/internal/webui/assets/index.html": 1,
+        "cmd/entire-echo/main.go": 30,
+        "cmd/entire-echo/web.go": 136
+      },
+      "user_removed_per_file": {
+        "cmd/entire-echo/internal/webui/assets/index.html": 1,
+        "cmd/entire-echo/main.go": 4
+      }
+    }
+  ]
+}

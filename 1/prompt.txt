@@ -1,0 +1,72 @@
+Continue the Noon Curveball implementation.
+
+Clarifications:
+
+1. There is no stash. The existing dirty main.go, web.go, index.html and any
+   related web integration files are the intended integration WIP. Inspect and
+   adapt those working-tree changes in place. Do not discard them and do not
+   search for stash@{0} again.
+
+2. The organizer fixture was not supplied to this checkout. The Curveball
+   permits at least one test using redacted OR missing Checkpoint data.
+   Therefore proceed now with a clearly labelled synthetic missing-context
+   fixture based only on the existing ReviewBundle schema.
+
+3. Do not describe that synthetic fixture as organizer-provided. Add a
+   documented placeholder/location where the official fixture can be added
+   later. Record the missing organizer fixture as a limitation in
+   BUILDATHON.md.
+
+4. The required reconstruction and Entire Graph impact analysis were completed
+   before editing. Summarize those affected paths and preserve the commands and
+   limitations as evidence.
+
+Important privacy interpretation:
+
+- Raw prompts and transcripts must never be sent to a new external service.
+- Existing local functionality must continue working.
+- Do not unnecessarily remove evidence from local terminal output, localhost
+  HTML or explicitly requested local JSON when complete context is available.
+- Treat these as local sensitive outputs and clearly label them.
+- No analytics, CDN, external summarizer, cloud voice or external API calls.
+- Browser speech may use only voices with localService === true.
+- The HTTP server must bind to 127.0.0.1 by default.
+- Missing or redacted evidence must produce partial/redacted/unavailable status
+  and must never be presented as complete or authoritative.
+
+Now implement:
+
+1. Complete the existing CLI-to-local-web integration.
+2. Introduce explicit context completeness:
+   complete, partial, redacted, unavailable.
+3. Include reasons for every non-complete state.
+4. Propagate completeness through ReviewBundle, terminal, JSON, localhost API,
+   browser UI and speech-readable content.
+5. Preserve current complete-checkpoint behavior.
+6. Add a synthetic missing-context test.
+7. Add sentinel-secret tests proving sensitive values never reach an external
+   request, cloud speech path, logs or error reporting.
+8. Add tests confirming only local browser voices are selectable.
+9. Add tests confirming localhost binding and graceful web/API failure.
+10. Add a restrictive CSP and ensure assets have no external dependencies.
+11. Update BUILDATHON.md with the changed assumption, Graph impact evidence,
+    adaptation, fixture provenance, tests and limitations.
+
+Run:
+- gofmt on changed Go files
+- go test ./cmd/entire-echo/...
+- go vet ./cmd/entire-echo/...
+- go build ./cmd/entire-echo
+- node --check on the web JavaScript
+- git diff --check
+- local browser smoke test
+
+Do not commit.
+
+At the end report:
+- changed files
+- privacy guarantees
+- Graph evidence
+- tests and results
+- remaining risks
+- git status
