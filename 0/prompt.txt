@@ -1,0 +1,41 @@
+We are participating in the Bengaluru Tech Week Buildathon under Track E1:
+Checkpoint-Native Developer Experience.
+
+Project: Entire Echo — Accessible Checkpoint Review.
+
+Entire Echo will transform a real Entire Checkpoint and Entire Graph findings into
+an evidence-grounded, voice-guided code review. It should help developers,
+especially developers with dyslexia, ADHD, or reading overload, understand:
+
+- what was requested,
+- what was implemented,
+- what may be missing,
+- what could be affected,
+- what evidence supports each statement,
+- and how another developer or agent can safely continue the work.
+
+This session is our first required milestone:
+Initial understanding and intended architecture.
+
+Before implementing anything:
+
+1. Inspect the repository structure.
+2. Use Entire Graph search or definition lookup to locate:
+   - checkpoint CLI commands,
+   - checkpoint data structures and storage,
+   - checkpoint explanation/reconstruction logic,
+   - plugin or extension points,
+   - and any existing Graph integration.
+3. Verify Graph results by reading the relevant source files.
+4. Clearly distinguish confirmed findings from assumptions.
+5. Propose the smallest hackathon-ready architecture for Entire Echo.
+6. Include the intended input, processing stages, evidence model, accessible UI,
+   voice interaction, output, and failure handling.
+7. Record rejected options, assumptions, open questions, technical risks, and
+   evidence that influenced the architecture.
+8. Create docs/buildathon/initial-architecture.md with these findings.
+
+Do not implement product functionality.
+Do not commit changes.
+Do not modify unrelated files.
+Report every Graph command used and the source files used for verification.
