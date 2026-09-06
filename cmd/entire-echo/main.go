@@ -486,6 +486,9 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if *webOutput {
+		fmt.Fprintln(os.Stderr, "Building the review locally. Graph checks may take up to 50 seconds…")
+	}
 	bundle, err := build(ctx, execRunner{}, mustGetwd(), flag.Arg(0))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "entire echo: could not build the review. Verify the checkpoint target with 'entire checkpoint explain <target> --json'.")

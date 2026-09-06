@@ -6,7 +6,7 @@ Entire Echo is an external `entire-echo` plugin that reconstructs one checkpoint
 
 ## Problem, intended user and why it matters
 
-The intended user is not specified more narrowly than a user who needs to understand what a checkpoint requested, implemented, left uncertain, or may affect. Echo turns checkpoint metadata, scoped transcript content, prompts, stored summary, changed files, and an associated diff into a factual review that can be continued safely.
+Entire Echo is for developers with dyslexia, ADHD, reading fatigue, or people taking over AI-assisted work who need to understand what was requested, implemented, uncertain, affected, and safe to continue. Echo turns checkpoint metadata, scoped transcript content, prompts, stored summary, changed files, and an associated diff into a factual review that can be continued safely.
 
 This matters because the review remains grounded in checkpoint and code evidence, preserves provenance, and provides an accessible linear view instead of requiring users to inspect raw or unbounded transcripts.
 
@@ -111,7 +111,7 @@ The Curveball implementation is checkpoint
 privacy implementation files, including the ReviewBundle contract, loopback
 server, local assets, synthetic fixture, tests, and this document.
 
-For a future demo, each checkpoint entry should identify the exact checkpoint, session, and commit and state what its evidence proves. The evidence model requires:
+The completed demo uses checkpoint evidence and preserves these requirements:
 
 - Requested: checkpoint-scoped user prompt or stored prompt.
 - Implemented: diff hunk and/or checkpoint transcript action, plus changed file.
@@ -122,7 +122,7 @@ For a future demo, each checkpoint entry should identify the exact checkpoint, s
 
 ## Setup, run and test instructions
 
-The architecture specifies the intended invocation but does not provide validated build, installation, or test commands.
+The implementation has validated build and test commands.
 
 Intended invocation:
 
@@ -196,4 +196,17 @@ Known limitations and unresolved decisions include:
 - Whether Graph queries should be user-visible and replayable in the output bundle is undecided.
 - Accessibility testing resources are not yet identified.
 
-The proposed next steps are to verify plugin and Graph invocation on supported development machines, choose the judging delivery form, implement the deterministic evidence model and renderers, verify diff linkage for ordinary committed checkpoints, and conduct accessibility testing before the demo.
+Next steps are to refresh the missing organizer fixture, investigate the non-responsive runtime Graph impact queries, and conduct broader assistive-technology testing before future delivery.
+
+## Final UI polish evidence
+
+Final checkpoint: `01M1TT0JM52PSW57NAWDF968CZ`. The final pre-polish merge is
+`79518ac9349b6cf1e104b1a9c534c2d07a69f6fe`; the repository is
+[`gayathrithedev/cli`](https://github.com/gayathrithedev/cli) and the privacy
+integration was reviewed in [PR #5](https://github.com/gayathrithedev/cli/pull/5).
+
+The UI polish keeps the evidence model intact while presenting a guided
+four-step review, compact context limitation disclosure, evidence rail, and
+sticky local-voice dock. Verification covers keyboard navigation, responsive
+layout, local-only assets, CSP, and no automatic speech. Databricks remains
+explicitly not used and this project does not opt in to it.
