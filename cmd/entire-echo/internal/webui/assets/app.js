@@ -1,225 +1,37 @@
-(() => {
-  "use strict";
-
-  const sections = [
-    ["Requested", "requested"],
-    ["Implemented", "implemented"],
-    ["Missing or uncertain", "missing_or_uncertain"],
-    ["Potentially affected", "potentially_affected"]
+(() => { "use strict";
+  const sections=[
+    ["Requested","requested","What the stored checkpoint says the user asked for."],
+    ["Implemented","implemented","What the available evidence shows was changed or completed."],
+    ["Missing or uncertain","missing_or_uncertain","What could not be established from the available evidence."],
+    ["Potentially affected","potentially_affected","Possible static impact. This is not proof of runtime behavior."]
   ];
-  const $ = (id) => document.getElementById(id);
-  const state = { bundle: null, cards: [], active: 0, rate: 1, speaking: false, paused: false, supported: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window, voices: [] };
-
-  function element(name, text, className) {
-    const node = document.createElement(name);
-    if (text !== undefined) node.textContent = text;
-    if (className) node.className = className;
-    return node;
-  }
-  function button(label, onClick, className) {
-    const node = element("button", label, className);
-    node.type = "button";
-    node.addEventListener("click", onClick);
-    return node;
-  }
-  function setStatus(message) { $("short-status").textContent = message; }
-  function evidenceMap() { return new Map((state.bundle.evidence || []).map((item) => [item.id, item])); }
-
-  function validateBundle(bundle) {
-    if (!bundle || typeof bundle !== "object") throw new Error("Review data is not an object.");
-    if (bundle.schema_version !== "entire-echo.review-bundle/v1") throw new Error("Review data has an unsupported or missing schema version.");
-    if (!bundle.target || !bundle.target.checkpoint_id || !bundle.target.session_id) throw new Error("Review data is missing checkpoint or session identifiers.");
-    if (!bundle.context || !["complete", "partial", "redacted", "unavailable"].includes(bundle.context.status)) throw new Error("Review data has an invalid context completeness status.");
-    if (bundle.context.status !== "complete" && (!Array.isArray(bundle.context.reasons) || bundle.context.reasons.length === 0)) throw new Error("Incomplete review data must explain why it is incomplete.");
-    if (!Array.isArray(bundle.evidence)) throw new Error("Review data is missing evidence.");
-    const ids = new Set(bundle.evidence.map((item) => item && item.id));
-    if (ids.has(undefined) || ids.has("")) throw new Error("Review data has evidence without an ID.");
-    const claims = [bundle.overview].concat(...sections.map(([, key]) => bundle[key] || []), bundle.continuation || []);
-    for (const claim of claims) {
-      if (!claim || typeof claim.text !== "string" || !Array.isArray(claim.evidence_ids) || claim.evidence_ids.length === 0 || claim.evidence_ids.some((id) => !ids.has(id))) throw new Error("Review data has a claim without valid evidence IDs.");
-    }
-    for (const warning of bundle.warnings || []) {
-      if (!warning || typeof warning.text !== "string" || !Array.isArray(warning.evidence_ids) || warning.evidence_ids.length === 0 || warning.evidence_ids.some((id) => !ids.has(id))) throw new Error("Review data has a warning without valid evidence IDs.");
-    }
-  }
-
-  function sourceControl(ids) {
-    const label = ids.length === 1 ? `Show source ${ids[0]}` : `Show sources ${ids.join(", ")}`;
-    return button(label, () => {
-      ids.forEach((id) => {
-        const detail = $("evidence-" + id);
-        if (detail) detail.open = true;
-      });
-      setStatus(`Opened source details for ${ids.join(", ")}.`);
-    }, "source-control");
-  }
-  function claimList(claims, emptyText) {
-    if (!claims.length) return element("p", emptyText, "empty-note");
-    const list = element("ul", undefined, "claim-list");
-    claims.forEach((claim) => {
-      const item = element("li");
-      item.append(element("span", claim.text));
-      item.append(element("span", ` (${claim.confidence || "unlabelled"})`, "claim-meta"));
-      item.append(sourceControl(claim.evidence_ids));
-      list.append(item);
-    });
-    return list;
-  }
-  function renderTarget(target) {
-    const node = $("target"); node.replaceChildren();
-    [["Checkpoint", target.checkpoint_id], ["Session", target.session_id], ["Commit", target.commit || "Unavailable"]].forEach(([name, value]) => {
-      node.append(element("dt", name), element("dd", value));
-    });
-  }
-  function renderContext(context) {
-    const reasons = context.reasons || [];
-    const label = context.status === "complete" ? "Context complete." : `Context ${context.status}: ${reasons.join(" ")}`;
-    const node = $("context-state");
-    node.textContent = label;
-    node.dataset.status = context.status;
-  }
-  function activeCard() { return state.cards[state.active]; }
-  function updateActiveCard(announce) {
-    state.cards.forEach((card, index) => card.article.dataset.active = String(index === state.active));
-    const card = activeCard();
-    $("active-card").textContent = card ? `Active card: ${state.active + 1} of ${state.cards.length}, ${card.title}.` : "No card is active.";
-    updateSpeechPreview();
-    if (announce && card) setStatus(`Card ${state.active + 1}: ${card.title}.`);
-  }
-  function setActive(index, announce) {
-    if (!state.cards.length) return;
-    state.active = Math.max(0, Math.min(index, state.cards.length - 1));
-    updateActiveCard(announce);
-  }
-  function renderCards(bundle) {
-    const list = $("cards"); list.replaceChildren(); state.cards = [];
-    sections.forEach(([title, key]) => {
-      const claims = Array.isArray(bundle[key]) ? bundle[key] : [];
-      const article = element("article", undefined, "review-card");
-      const header = element("header");
-      header.append(element("h3", title));
-      header.append(button("Make current card", () => setActive(state.cards.findIndex((card) => card.article === article), true)));
-      article.append(header);
-      const empty = key === "potentially_affected"
-        ? "No potential impact claim was established from the available evidence. This does not mean there is no impact."
-        : "No claim was established from the available evidence.";
-      article.append(claimList(claims, empty));
-      list.append(article);
-      state.cards.push({ title, claims, article });
-    });
-    setActive(0, false);
-  }
-  function renderEvidence(bundle) {
-    const box = $("evidence"); box.replaceChildren();
-    if (!bundle.evidence.length) { box.append(element("p", "Evidence is unavailable in this review data.", "empty-note")); return; }
-    bundle.evidence.forEach((evidence) => {
-      const detail = element("details"); detail.id = "evidence-" + evidence.id;
-      detail.append(element("summary", `${evidence.id}: ${evidence.kind || "unlabelled evidence"}`));
-      const list = element("dl", "", "target detailed-only");
-      [["Locator", evidence.locator || "Unavailable"], ["Confidence", evidence.confidence || "Unavailable"], ["Command", Array.isArray(evidence.command) ? evidence.command.join(" ") : "Unavailable"]].forEach(([name, value]) => list.append(element("dt", name), element("dd", value)));
-      detail.append(list);
-      detail.append(element("p", "Excerpt", "detailed-only"));
-      detail.append(element("pre", evidence.excerpt || "No excerpt was available.", "detailed-only"));
-      box.append(detail);
-    });
-  }
-  function renderWarnings(bundle) {
-    const box = $("warnings"); box.replaceChildren();
-    const warnings = Array.isArray(bundle.warnings) ? bundle.warnings : [];
-    if (!warnings.length) { box.append(element("p", "No warnings were supplied with this review.", "empty-note")); return; }
-    warnings.forEach((warning) => {
-      const note = element("div", undefined, "warning");
-      note.append(element("p", warning.text));
-      note.append(sourceControl(warning.evidence_ids));
-      box.append(note);
-    });
-  }
-  function renderBundle(bundle, source) {
-    validateBundle(bundle);
-    state.bundle = bundle;
-    $("load-state").textContent = source === "fixture" ? "Showing the included development fixture." : "Showing review data from /api/review.";
-    renderTarget(bundle.target);
-    renderContext(bundle.context);
-    const overview = $("overview"); overview.replaceChildren(element("p", bundle.overview.text), sourceControl(bundle.overview.evidence_ids));
-    renderCards(bundle);
-    const continuation = $("continuation"); continuation.replaceChildren(claimList(bundle.continuation || [], "No continuation claim was supplied."));
-    renderEvidence(bundle); renderWarnings(bundle); updateSpeechControls();
-    setStatus(source === "fixture" ? "Fixture review loaded." : "Review loaded.");
-  }
-  function showUnavailable(message) {
-    state.bundle = null; state.cards = [];
-    $("load-state").textContent = `Review data is unavailable: ${message}`;
-    ["target", "overview", "cards", "continuation", "evidence", "warnings"].forEach((id) => $(id).replaceChildren());
-    $("context-state").textContent = "Context unavailable: review data could not be loaded.";
-    $("context-state").dataset.status = "unavailable";
-    $("active-card").textContent = "No card is active.";
-    $("warnings").append(element("p", "The text interface remains available. Select “Use included fixture” to inspect the interface with local example data.", "warning"));
-    updateSpeechControls(); setStatus("Review data is unavailable.");
-  }
-  async function load(mode) {
-    $("load-state").textContent = mode === "fixture" ? "Loading included fixture…" : "Loading review data…";
-    try {
-      const response = await fetch(mode === "fixture" ? "review.fixture.json" : "/api/review", { headers: { Accept: "application/json" } });
-      if (!response.ok) throw new Error(`Request returned ${response.status}.`);
-      renderBundle(await response.json(), mode);
-    } catch (error) { showUnavailable(error instanceof Error ? error.message : "Unknown loading error."); }
-  }
-
-  function speechText(card) {
-    if (!card) return "No review card is available.";
-    const claims = card.claims.length ? card.claims.map((claim) => claim.text).join(" ") : "No claim was established from the available evidence.";
-    const context = state.bundle && state.bundle.context;
-    const qualification = context && context.status !== "complete" ? `Context ${context.status}. ${(context.reasons || []).join(" ")} ` : "";
-    return `${qualification}${card.title}. ${claims}`;
-  }
-  function updateSpeechPreview() { $("speech-preview").textContent = `What will be spoken: ${speechText(activeCard())}`; }
-  function updateSpeechControls() {
-    const available = state.supported && Boolean(activeCard());
-    ["read-card", "repeat", "previous-card", "next-card", "slower", "faster", "read-evidence"].forEach((id) => { $(id).disabled = !available; });
-    $("pause-resume").disabled = !state.supported || !state.speaking;
-    $("stop").disabled = !state.supported || !state.speaking;
-    $("pause-resume").textContent = state.paused ? "Resume" : "Pause";
-    $("speech-rate").textContent = `Rate: ${state.rate.toFixed(1)}×`;
-    const localVoiceText = state.voices.length ? ` ${state.voices.length} local browser voice${state.voices.length === 1 ? " is" : "s are"} available.` : " No local browser voice is available.";
-    $("speech-state").textContent = state.supported ? `Speech uses only local browser voices and starts only when you select a reading control.${localVoiceText}` : "Speech synthesis is unavailable in this browser. The review remains available as text.";
-    updateSpeechPreview();
-  }
-  function speak(text, label) {
-    if (!state.supported || !text) return;
-    window.speechSynthesis.cancel();
-    const voice = state.voices[0];
-    if (!voice) { setStatus("No local browser voice is available. The review remains available as text."); return; }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = voice;
-    utterance.rate = state.rate;
-    utterance.onstart = () => { state.speaking = true; state.paused = false; updateSpeechControls(); setStatus(`Reading ${label}.`); };
-    utterance.onend = () => { state.speaking = false; state.paused = false; updateSpeechControls(); setStatus("Reading finished."); };
-    utterance.onerror = () => { state.speaking = false; state.paused = false; updateSpeechControls(); setStatus("Speech could not be played. The review is still available as text."); };
-    window.speechSynthesis.speak(utterance);
-  }
-  function speakEvidence() {
-    const card = activeCard(); if (!card) return;
-    const map = evidenceMap(); const ids = [...new Set(card.claims.flatMap((claim) => claim.evidence_ids))];
-    const text = ids.map((id) => { const evidence = map.get(id); return evidence ? `Source ${id}. ${evidence.kind}. ${evidence.locator}. ${evidence.excerpt || "No excerpt was available."}` : `Source ${id} is unavailable.`; }).join(" ");
-    speak(text || "No evidence is linked to this card.", "evidence");
-  }
-  function bindControls() {
-    document.querySelectorAll('input[name="density"]').forEach((input) => input.addEventListener("change", () => { document.body.dataset.density = input.value; setStatus(`${input.value} reading density selected.`); }));
-    $("fixture-mode").addEventListener("click", () => load("fixture"));
-    $("read-card").addEventListener("click", () => speak(speechText(activeCard()), "current card"));
-    $("repeat").addEventListener("click", () => speak(speechText(activeCard()), "current card again"));
-    $("previous-card").addEventListener("click", () => setActive(state.active - 1, true));
-    $("next-card").addEventListener("click", () => setActive(state.active + 1, true));
-    $("slower").addEventListener("click", () => { state.rate = Math.max(0.5, +(state.rate - 0.1).toFixed(1)); updateSpeechControls(); setStatus(`Speech rate ${state.rate.toFixed(1)} times.`); });
-    $("faster").addEventListener("click", () => { state.rate = Math.min(2, +(state.rate + 0.1).toFixed(1)); updateSpeechControls(); setStatus(`Speech rate ${state.rate.toFixed(1)} times.`); });
-    $("read-evidence").addEventListener("click", speakEvidence);
-    $("pause-resume").addEventListener("click", () => { if (state.paused) { window.speechSynthesis.resume(); state.paused = false; setStatus("Speech resumed."); } else { window.speechSynthesis.pause(); state.paused = true; setStatus("Speech paused."); } updateSpeechControls(); });
-    $("stop").addEventListener("click", () => { window.speechSynthesis.cancel(); state.speaking = false; state.paused = false; updateSpeechControls(); setStatus("Speech stopped."); });
-  }
-  function localVoices(voices) { return (voices || []).filter((voice) => voice && voice.localService === true); }
-  function refreshVoices() { state.voices = localVoices(window.speechSynthesis.getVoices()); updateSpeechControls(); }
-  window.EchoUI = { load, renderBundle, showUnavailable, state, localVoices };
-  bindControls(); updateSpeechControls();
-  if (state.supported) { refreshVoices(); window.speechSynthesis.addEventListener("voiceschanged", refreshVoices); }
-  load(new URLSearchParams(window.location.search).get("mode") === "fixture" ? "fixture" : "production");
+  const $=id=>document.getElementById(id);
+  const state={bundle:null,cards:[],active:0,rate:1,speaking:false,paused:false,supported:"speechSynthesis" in window&&"SpeechSynthesisUtterance" in window,voices:[]};
+  const kindNames={checkpoint_metadata:"Checkpoint metadata",checkpoint_transcript:"Checkpoint transcript",git_diff:"Git diff",graph_impact:"Graph impact",graph_warning:"Graph limitation",warning:"Limitation"};
+  function el(name,text,className){const n=document.createElement(name);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n}
+  function button(label,fn,className){const n=el("button",label,className);n.type="button";n.addEventListener("click",fn);return n}
+  function setStatus(message){$("short-status").textContent=message}
+  function validateBundle(b){if(!b||b.schema_version!=="entire-echo.review-bundle/v1")throw Error("Review data has an unsupported schema.");if(!b.target?.checkpoint_id||!b.target?.session_id)throw Error("Review data is missing its checkpoint target.");if(!b.context||!["complete","partial","redacted","unavailable"].includes(b.context.status))throw Error("Review data has an invalid context state.");if(b.context.status!=="complete"&&(!Array.isArray(b.context.reasons)||!b.context.reasons.length))throw Error("Incomplete review data must explain why.");const ids=new Set((b.evidence||[]).map(x=>x?.id));const claims=[b.overview,...sections.flatMap(([,key])=>b[key]||[]),...(b.continuation||[])];for(const c of claims)if(!c?.text||!c.evidence_ids?.length||c.evidence_ids.some(id=>!ids.has(id)))throw Error("Review data contains an ungrounded claim.")}
+  function evidenceMap(){return new Map((state.bundle.evidence||[]).map(e=>[e.id,e]))}
+  function sourceControl(ids){return button("View supporting evidence",()=>{ids.forEach(id=>{const d=$("evidence-"+id);if(d)d.open=true});setStatus(`Opened supporting evidence ${ids.join(", ")}.`)})}
+  function contextLabel(status){return status[0].toUpperCase()+status.slice(1)}
+  function renderContext(context){const incomplete=context.status!=="complete";$("header-context").textContent=contextLabel(context.status);$("header-context").dataset.status=context.status;$("context-banner").hidden=!incomplete;if(!incomplete)return;$("context-title").textContent=`This review has ${context.status} context`;$("context-summary").textContent="Some checkpoint information was unavailable or redacted. Findings below are limited to the evidence that could be verified.";const reasons=$("context-reasons");reasons.replaceChildren();(context.reasons||[]).forEach(r=>reasons.append(el("li",r)))}
+  function renderTarget(target){const box=$("target");box.replaceChildren();[["Checkpoint",target.checkpoint_id],["Session",target.session_id],["Commit",target.commit||"Unavailable"]].forEach(([label,value])=>{const row=el("div");const code=el("code",value);code.title=value;row.append(el("b",label),code);box.append(row)})}
+  function findingState(claims){if(!claims.length)return"Unavailable";return `${claims.length} ${claims.length===1?"finding":"findings"}`}
+  function renderNav(){const nav=$("review-nav");nav.replaceChildren();state.cards.forEach((card,i)=>{const b=button("",()=>setActive(i,true));b.setAttribute("aria-current",i===state.active?"step":"false");b.append(el("span",String(i+1),"step-number"),el("span",card.title,"step-name"),el("span",findingState(card.claims),"step-state"));nav.append(b)})}
+  function claimList(claims,empty){if(!claims.length)return el("p",empty,"empty-note");const list=el("ul",undefined,"claim-list");claims.forEach(c=>{const li=el("li");const row=el("div",undefined,"claim-row");row.append(el("span",c.text),el("span",c.confidence||"unlabelled",`claim-meta confidence-${c.confidence||"unknown"}`));const actions=el("div",undefined,"claim-actions");actions.append(sourceControl(c.evidence_ids));li.append(row,actions);list.append(li)});return list}
+  function renderActive(){const card=state.cards[state.active];if(!card)return;$("active-card").textContent=`Step ${state.active+1} of ${state.cards.length}`;$("review-heading").textContent=card.title;$("section-explanation").textContent=card.explanation;$("cards").replaceChildren(claimList(card.claims,card.empty));$("voice-card").textContent=`Step ${state.active+1} of ${state.cards.length} · ${card.title}`;const technical=$("technical-content");technical.replaceChildren();const linked=[...new Set(card.claims.flatMap(c=>c.evidence_ids))];if(!linked.length)technical.append(el("p","No technical evidence is linked to this section."));else linked.forEach(id=>{const e=evidenceMap().get(id);if(!e)return;technical.append(el("p",`${id} · ${kindNames[e.kind]||e.kind} · ${e.locator||"Unavailable"}`),el("pre",Array.isArray(e.command)?e.command.join(" "):"Unavailable"))});updateSpeechControls()}
+  function setActive(index,announce){if(!state.cards.length)return;state.active=Math.max(0,Math.min(index,state.cards.length-1));renderNav();renderActive();if(announce)setStatus(`Step ${state.active+1}: ${state.cards[state.active].title}.`)}
+  function renderEvidence(bundle){const box=$("evidence");box.replaceChildren();$("evidence-count").textContent=`${bundle.evidence.length} sources`;bundle.evidence.forEach(e=>{const d=el("details");d.id="evidence-"+e.id;d.append(el("summary",`${e.id} · ${kindNames[e.kind]||e.kind||"Evidence"}`));const dl=el("dl",undefined,"evidence-meta");[["Confidence",e.confidence||"Unavailable"],["Locator",e.locator||"Unavailable"],["Command",Array.isArray(e.command)?e.command.join(" "):"Unavailable"]].forEach(([k,v])=>dl.append(el("dt",k),el("dd",v)));d.append(dl,el("pre",e.excerpt||"No excerpt was available.","evidence-excerpt"));box.append(d)})}
+  function renderBundle(bundle,source){validateBundle(bundle);state.bundle=bundle;state.cards=sections.map(([title,key,explanation])=>({title,claims:Array.isArray(bundle[key])?bundle[key]:[],explanation,empty:key==="potentially_affected"?"No potential impact was established. This does not mean there is no impact.":"No claim was established from the available evidence."}));$("load-state").textContent=source==="fixture"?"Showing the development fixture.":"Showing review data from the local review API.";$("fixture-indicator").hidden=source!=="fixture";renderContext(bundle.context);renderTarget(bundle.target);$("overview").replaceChildren(el("p",bundle.overview.text),sourceControl(bundle.overview.evidence_ids));$("continuation").replaceChildren(claimList(bundle.continuation||[],"No continuation claim was supplied."));renderEvidence(bundle);setActive(0,false);setStatus(source==="fixture"?"Development fixture loaded.":"Review loaded.")}
+  function showUnavailable(message){state.bundle=null;state.cards=[];$("load-state").textContent=`Review data is unavailable: ${message}`;$("header-context").textContent="Unavailable";$("header-context").dataset.status="unavailable";$("context-banner").hidden=false;$("context-title").textContent="This review is unavailable";$("context-summary").textContent="The review could not be loaded. Text and recovery options remain available.";$("context-reasons").replaceChildren(el("li",message));$("cards").replaceChildren(el("p","Use the development fixture only to inspect the local interface.","empty-note"));$("review-nav").replaceChildren(button("Use development fixture",()=>load("fixture")));updateSpeechControls();setStatus("Review data is unavailable.")}
+  async function load(mode){$("load-state").textContent=mode==="fixture"?"Loading development fixture…":"Loading review data…";try{const response=await fetch(mode === "fixture" ? "review.fixture.json" : "/api/review",{headers:{Accept:"application/json"}});if(!response.ok)throw Error(`Request returned ${response.status}.`);renderBundle(await response.json(),mode)}catch(error){showUnavailable(error instanceof Error?error.message:"Unknown loading error.")}}
+  function speechText(card){if(!card)return"No review card is available.";const q=state.bundle?.context.status!=="complete"?`Context ${state.bundle.context.status}. ${(state.bundle.context.reasons||[]).join(" ")} `:"";const claims=card.claims.length?card.claims.map(c=>c.text).join(" "):card.empty;return `${q}${card.title}. ${claims}`}
+  function localVoices(voices){return(voices||[]).filter(voice=>voice&&voice.localService === true)}function refreshVoices(){state.voices=localVoices(window.speechSynthesis.getVoices());updateSpeechControls()}
+  function updateSpeechControls(){const card=state.cards[state.active];const available=state.supported&&!!card;["read-card","repeat","previous-card","next-card","slower","faster","read-evidence"].forEach(id=>$(id).disabled=!available);$("stop").disabled=!state.speaking;$("read-card").textContent=state.paused?"Resume":state.speaking?"Pause":"Play";$("speech-rate").textContent=`${state.rate.toFixed(1)}×`;$("speech-state").textContent=state.supported?(state.voices.length?"Local voice ready":"Local voice unavailable; text remains available."):"Local voice unavailable; text remains available.";$("speech-preview").textContent=`What will be spoken: ${speechText(card)}`}
+  function speak(text,label){if(!state.supported||!text)return;const voice=state.voices[0];if(!voice){setStatus("No local browser voice is available. Text remains available.");return}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.voice = voice;utterance.rate=state.rate;utterance.onstart=()=>{state.speaking=true;state.paused=false;updateSpeechControls();setStatus(`Reading ${label}.`)};utterance.onend=utterance.onerror=()=>{state.speaking=false;state.paused=false;updateSpeechControls();setStatus("Reading finished.")};window.speechSynthesis.speak(utterance)}
+  function readOrPause(){if(state.speaking&&!state.paused){window.speechSynthesis.pause();state.paused=true;updateSpeechControls();return}if(state.speaking&&state.paused){window.speechSynthesis.resume();state.paused=false;updateSpeechControls();return}speak(speechText(state.cards[state.active]),"current step")}
+  function readEvidence(){const ids=[...new Set((state.cards[state.active]?.claims||[]).flatMap(c=>c.evidence_ids))];const map=evidenceMap();speak(ids.map(id=>{const e=map.get(id);return e?`Source ${id}. ${kindNames[e.kind]||e.kind}. ${e.locator}. ${e.excerpt||""}`:`Source ${id} is unavailable.`}).join(" ")||"No evidence is linked to this step.","evidence")}
+  function bind(){document.querySelectorAll('input[name="density"]').forEach(i=>i.addEventListener("change",()=>{document.body.dataset.density=i.value;setStatus(`${i.value} reading mode selected.`)}));$("read-card").addEventListener("click",readOrPause);$("repeat").addEventListener("click",()=>speak(speechText(state.cards[state.active]),"current step again"));$("previous-card").addEventListener("click",()=>setActive(state.active-1,true));$("next-card").addEventListener("click",()=>setActive(state.active+1,true));$("stop").addEventListener("click",()=>{window.speechSynthesis.cancel();state.speaking=false;state.paused=false;updateSpeechControls();setStatus("Speech stopped.")});$("read-evidence").addEventListener("click",readEvidence);$("slower").addEventListener("click",()=>{state.rate=Math.max(.5,+(state.rate-.1).toFixed(1));updateSpeechControls()});$("faster").addEventListener("click",()=>{state.rate=Math.min(2,+(state.rate+.1).toFixed(1));updateSpeechControls()})}
+  window.EchoUI={load,renderBundle,showUnavailable,state,localVoices};bind();updateSpeechControls();if(state.supported){refreshVoices();window.speechSynthesis.addEventListener("voiceschanged",refreshVoices)}load(new URLSearchParams(location.search).get("mode")==="fixture"?"fixture":"production")
 })();
